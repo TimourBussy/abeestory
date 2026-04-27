@@ -4,11 +4,12 @@ export class Bee {
 	vx: number;
 	vy: number;
 	frameIndex: number;
+	direction: 1 | -1; // 1 = right, -1 = left
 
 	// Constants
 	static readonly SIZE = 76;
-	static readonly MAX_FALL_SPEED = 2;
-	static readonly HORIZONTAL_ACCEL = 0.2;
+	static readonly MAX_FALL_SPEED = 4;
+	static readonly HORIZONTAL_ACCEL = 0.5;
 	static readonly SPRITE_COLS = 6;
 	static readonly TOTAL_FRAMES = 12;
 
@@ -18,6 +19,7 @@ export class Bee {
 		this.vx = 0;
 		this.vy = 0;
 		this.frameIndex = 0;
+		this.direction = 1;
 	}
 
 	update(
@@ -41,8 +43,14 @@ export class Bee {
 		}
 
 		// Horizontal movement
-		if (keys.left) this.vx -= Bee.HORIZONTAL_ACCEL;
-		if (keys.right) this.vx += Bee.HORIZONTAL_ACCEL;
+		if (keys.left) {
+			this.vx -= Bee.HORIZONTAL_ACCEL;
+			this.direction = -1;
+		}
+		if (keys.right) {
+			this.vx += Bee.HORIZONTAL_ACCEL;
+			this.direction = 1;
+		}
 
 		// Friction
 		this.vx *= 0.9; // friction

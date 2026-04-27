@@ -10,7 +10,7 @@ export class Game {
 		left: boolean;
 		right: boolean;
 	};
-	static readonly KEYS = {
+	static readonly KEY_NAMES = {
 		up: ["ArrowUp", "z", "w", " "],
 		left: ["ArrowLeft", "q", "a"],
 		right: ["ArrowRight", "d"],
@@ -41,26 +41,26 @@ export class Game {
 
 	private setupEventListeners() {
 		window.addEventListener("keydown", (e) => {
-			if (Game.KEYS.up.includes(e.key)) {
+			if (Game.KEY_NAMES.up.includes(e.key)) {
 				this.keys.up = true;
 			}
-			if (Game.KEYS.left.includes(e.key)) this.keys.left = true;
-			if (Game.KEYS.right.includes(e.key)) this.keys.right = true;
+			if (Game.KEY_NAMES.left.includes(e.key)) this.keys.left = true;
+			if (Game.KEY_NAMES.right.includes(e.key)) this.keys.right = true;
 
 			e.preventDefault(); // prevent scrolling when space is pressed
 		});
 
 		window.addEventListener("keyup", (e) => {
-			if (Game.KEYS.up.includes(e.key)) this.keys.up = false;
-			if (Game.KEYS.left.includes(e.key)) this.keys.left = false;
-			if (Game.KEYS.right.includes(e.key)) this.keys.right = false;
+			if (Game.KEY_NAMES.up.includes(e.key)) this.keys.up = false;
+			if (Game.KEY_NAMES.left.includes(e.key)) this.keys.left = false;
+			if (Game.KEY_NAMES.right.includes(e.key)) this.keys.right = false;
 		});
 	}
 
 	private setupAnimation() {
 		setInterval(() => {
 			this.bee.frameIndex = (this.bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
-		}, 25);
+		}, 20);
 	}
 
 	private startGameLoop() {
@@ -83,7 +83,7 @@ export class Game {
 		return `
       <div class="scene">
         <div class="bee" style="
-          transform: translate(${this.bee.x}px, ${this.bee.y}px);
+          transform: translate(${this.bee.x}px, ${this.bee.y}px) scaleX(${this.bee.direction});
           background-position: ${bgPos.x}px ${bgPos.y}px">
         </div>
       </div>
