@@ -2,6 +2,8 @@ import { Sprite } from "./Sprite";
 
 export class Bee extends Sprite {
 	// Constants
+	static readonly FRAME_W = 152;
+	static readonly FRAME_H = 152;
 	static readonly SIZE = 76;
 	static readonly MAX_FALL_SPEED = 4;
 	static readonly HORIZONTAL_ACCEL = 0.5;
@@ -16,6 +18,7 @@ export class Bee extends Sprite {
 		keys: { up: boolean; down: boolean; left: boolean; right: boolean },
 		width: number,
 		height: number,
+		groundHeight: number = 0,
 	) {
 		// Physics
 		if (keys.up) {
@@ -62,8 +65,9 @@ export class Bee extends Sprite {
 			this.y = 0;
 			this.vy = 0;
 		}
-		if (this.y > height - Bee.SIZE) {
-			this.y = height - Bee.SIZE;
+		const floor = height - Bee.SIZE - groundHeight;
+		if (this.y > floor) {
+			this.y = floor;
 			this.vy = 0;
 		}
 	}

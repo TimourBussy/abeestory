@@ -16,77 +16,158 @@ export class Game {
 		right: ["ArrowRight", "d"],
 	};
 
-	private rootElement: HTMLElement | null;
+	private canvas: HTMLCanvasElement;
+	private ctx: CanvasRenderingContext2D;
+	private rootElement: HTMLElement;
 
-	constructor(rootElement: HTMLElement | null) {
+	// Images
+	private beeSprite: HTMLImageElement;
+	private groundImage: HTMLImageElement;
+	private imagesLoaded: number = 0;
+	private totalImages: number = 2;
+
+	// Camera
+	private cameraX: number = 0;
+
+	constructor(rootElement: HTMLElement) {
 		this.rootElement = rootElement;
-		const sceneElement =
-			document.querySelector(".scene") || document.querySelector("#app");
-		this.width = sceneElement?.clientWidth || window.innerWidth;
-		this.height = sceneElement?.clientHeight || window.innerHeight;
+
+		// Canvas setup
+		this.canvas = document.createElement("canvas");
+		this.canvas.width = window.innerWidth;
+		this.canvas.height = window.innerHeight;
+		this.rootElement.appendChild(this.canvas);
+
+		this.ctx = this.canvas.getContext("2d")!;
+		this.width = this.canvas.width;
+		this.height = this.canvas.height;
+
 		this.bee = new Bee(100, 100);
-		this.keys = {
-			up: false,
-			down: false,
-			left: false,
-			right: false,
-		};
+		this.keys = { up: false, down: false, left: false, right: false };
+
+		// Resize
+		window.addEventListener("resize", () => {
+			this.canvas.width = window.innerWidth;
+			this.canvas.height = window.innerHeight;
+			this.width = this.canvas.width;
+			this.height = this.canvas.height;
+		});
+
+		// Load images
+		this.beeSprite = new Image();
+		this.groundImage = new Image();
+
+		this.beeSprite.onload = () => this.imagesLoaded++;
+		this.groundImage.onload = () => this.imagesLoaded++;
+
+		this.beeSprite.src = "/sprites/bee.png";
+		this.groundImage.src = "/sprites/ground.png";
 	}
 
 	start() {
-		this.setupEventListeners();
-		this.setupAnimation();
-		this.startGameLoop();
-	}
-
-	private setupEventListeners() {
+		// Setup event listeners
 		window.addEventListener("keydown", (e) => {
-			if (Game.KEY_NAMES.up.includes(e.key)) {
-				this.keys.up = true;
-			}
+			if (Game.KEY_NAMES.up.includes(e.key)) this.keys.up = true;
 			if (Game.KEY_NAMES.left.includes(e.key)) this.keys.left = true;
 			if (Game.KEY_NAMES.right.includes(e.key)) this.keys.right = true;
-
-			e.preventDefault(); // prevent scrolling when space is pressed
+			e.preventDefault();
 		});
-
 		window.addEventListener("keyup", (e) => {
 			if (Game.KEY_NAMES.up.includes(e.key)) this.keys.up = false;
 			if (Game.KEY_NAMES.left.includes(e.key)) this.keys.left = false;
 			if (Game.KEY_NAMES.right.includes(e.key)) this.keys.right = false;
 		});
-	}
 
-	private setupAnimation() {
+		// Setup animation
 		setInterval(() => {
 			this.bee.frameIndex = (this.bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
-		}, 20);
-	}
+		}, 100);
 
-	private startGameLoop() {
-		const update = () => {
+		// Start game loop
+		const loop = () => {
 			this.update();
-			if (this.rootElement) {
-				this.rootElement.innerHTML = this.render();
-			}
-			requestAnimationFrame(update);
+			this.draw();
+			requestAnimationFrame(loop);
 		};
-		update();
+		loop();
 	}
 
 	update() {
-		this.bee.update(this.keys, this.width, this.height);
+		this.bee.update(
+			this.keys,
+			this.width,
+			this.height,
+			this.groundImage.naturalHeight - 62,
+		);
+
+		// Camera follows the bee horizontally
+		this.cameraX +=
+			(this.bee.x - this.width / 2 + Bee.SIZE / 2 - this.cameraX) * 0.1; // smooth follow
+		if (this.cameraX < 0) this.cameraX = 0;
 	}
 
-	render(): string {
-		const bgPos = this.bee.getBackgroundPosition();
-		return `
-      <div class="scene">
-        <div class="bee" style="
-          transform: translate(${this.bee.x}px, ${this.bee.y}px) scaleX(${this.bee.direction});
-          background-position: ${bgPos.x}px ${bgPos.y}px">
-        </div>
-      </div>
-    `;
+	draw() {
+		const ctx = this.ctx;
+
+		// Wait for images to load
+		if (this.imagesLoaded < this.totalImages) {
+			ctx.fillStyle = "lightblue";
+			ctx.fillRect(0, 0, this.width, this.height);
+			ctx.fillStyle = "black";
+			ctx.font = "20px sans-serif";
+			ctx.fillText("Loading...", this.width / 2 - 50, this.height / 2);
+			return;
+		}
+
+		// Fond
+		ctx.fillStyle = "lightblue";
+		ctx.fillRect(0, 0, this.width, this.height);
+
+		// Ground
+		const groundW = this.groundImage.naturalWidth;
+		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW) {
+			ctx.drawImage(
+				this.groundImage,
+				x,
+				this.height - this.groundImage.naturalHeight,
+			);
+		}
+
+		// Bee
+		const screenX = this.bee.x - this.cameraX;
+		const screenY = this.bee.y;
+
+		const col = this.bee.frameIndex % Bee.SPRITE_COLS;
+		const row = Math.floor(this.bee.frameIndex / Bee.SPRITE_COLS);
+
+		ctx.save();
+		if (this.bee.direction === -1) {
+			ctx.translate(screenX + Bee.SIZE, screenY);
+			ctx.scale(-1, 1);
+			ctx.drawImage(
+				this.beeSprite,
+				col * Bee.FRAME_W,
+				row * Bee.FRAME_H, // position in the spritesheet
+				Bee.FRAME_W,
+				Bee.FRAME_H, // size of one frame in the spritesheet
+				0,
+				0, // destination
+				Bee.SIZE,
+				Bee.SIZE, // displayed size
+			);
+		} else {
+			ctx.drawImage(
+				this.beeSprite,
+				col * Bee.FRAME_W,
+				row * Bee.FRAME_H,
+				Bee.FRAME_W,
+				Bee.FRAME_H,
+				screenX,
+				screenY,
+				Bee.SIZE,
+				Bee.SIZE,
+			);
+		}
+		ctx.restore();
 	}
 }

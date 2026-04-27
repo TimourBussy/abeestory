@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
 	margin: 0;
 	padding: 0;
 	width: 100%;
@@ -11,19 +12,7 @@ html, body {
 	height: 100%;
 }
 
-.scene {
-	width: 100%;
-	height: 100%;
-	position: relative;
-	background: lightblue;
-}
-
-.bee {
-	position: absolute;
-	width: var(--sprite-size);
-	height: var(--sprite-size);
-	background-image: url('/sprites/bee.png');
-	background-size: calc(var(--sprite-size) * 6) calc(var(--sprite-size) * 2);
-	background-repeat: no-repeat;
+canvas {
+	display: block;
 	image-rendering: pixelated;
 }
