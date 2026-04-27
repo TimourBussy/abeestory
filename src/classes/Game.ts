@@ -12,8 +12,9 @@ export class Game {
 	};
 
 	constructor() {
-		this.width = window.innerWidth;
-		this.height = window.innerHeight;
+		const sceneElement = document.querySelector(".scene") || document.querySelector("#app");
+		this.width = sceneElement?.clientWidth || window.innerWidth;
+		this.height = sceneElement?.clientHeight || window.innerHeight;
 		this.bee = new Bee(100, 100);
 		this.keys = {
 			up: false,

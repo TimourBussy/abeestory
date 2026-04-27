@@ -6,11 +6,11 @@ export class Bee {
 	frameIndex: number;
 
 	// Constants
-	static readonly SIZE = 152;
-	static readonly GRAVITY = 0.4;
+	static readonly SIZE = 76;
+	static readonly GRAVITY = 0.3;
 	static readonly LIFT = -0.7;
-	static readonly MAX_FALL_SPEED = 8;
-	static readonly HORIZONTAL_ACCEL = 0.5;
+	static readonly MAX_FALL_SPEED = 2;
+	static readonly HORIZONTAL_ACCEL = 0.4;
 	static readonly FRICTION = 0.9;
 	static readonly SPRITE_COLS = 6;
 	static readonly TOTAL_FRAMES = 12;
@@ -31,6 +31,9 @@ export class Bee {
 		// Physics
 		if (keys.up) {
 			this.vy += Bee.LIFT;
+			if (this.vy < -Bee.MAX_FALL_SPEED) {
+				this.vy = -Bee.MAX_FALL_SPEED;
+			}
 		} else {
 			this.vy += Bee.GRAVITY;
 		}

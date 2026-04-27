@@ -26,5 +26,4 @@ html, body {
 	background-size: calc(var(--sprite-size) * 6) calc(var(--sprite-size) * 2);
 	background-repeat: no-repeat;
 	image-rendering: pixelated;
-	scale: 0.5;
 }
