@@ -20,9 +20,11 @@ html, body {
 
 .bee {
 	position: absolute;
-}
-
-.bee img {
-	width: 64px;
-	height: 64px;
+	width: var(--sprite-size);
+	height: var(--sprite-size);
+	background-image: url('/sprites/bee.png');
+	background-size: calc(var(--sprite-size) * 6) calc(var(--sprite-size) * 2);
+	background-repeat: no-repeat;
+	image-rendering: pixelated;
+	scale: 0.5;
 }
