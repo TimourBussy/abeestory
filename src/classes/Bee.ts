@@ -1,11 +1,6 @@
-export class Bee {
-	x: number;
-	y: number;
-	vx: number;
-	vy: number;
-	frameIndex: number;
-	direction: 1 | -1; // 1 = right, -1 = left
+import { Sprite } from "./Sprite";
 
+export class Bee extends Sprite {
 	// Constants
 	static readonly SIZE = 76;
 	static readonly MAX_FALL_SPEED = 4;
@@ -14,12 +9,7 @@ export class Bee {
 	static readonly TOTAL_FRAMES = 12;
 
 	constructor(x: number = 0, y: number = 0) {
-		this.x = x;
-		this.y = y;
-		this.vx = 0;
-		this.vy = 0;
-		this.frameIndex = 0;
-		this.direction = 1;
+		super(x, y);
 	}
 
 	update(
@@ -53,7 +43,7 @@ export class Bee {
 		}
 
 		// Friction
-		this.vx *= 0.9; // friction
+		this.vx *= 0.9;
 
 		// Apply velocity to position
 		this.x += this.vx;
