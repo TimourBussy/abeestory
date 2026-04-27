@@ -10,9 +10,18 @@ export class Game {
 		left: boolean;
 		right: boolean;
 	};
+	static readonly KEYS = {
+		up: ["ArrowUp", "z", "w", " "],
+		left: ["ArrowLeft", "q", "a"],
+		right: ["ArrowRight", "d"],
+	};
 
-	constructor() {
-		const sceneElement = document.querySelector(".scene") || document.querySelector("#app");
+	private rootElement: HTMLElement | null;
+
+	constructor(rootElement: HTMLElement | null) {
+		this.rootElement = rootElement;
+		const sceneElement =
+			document.querySelector(".scene") || document.querySelector("#app");
 		this.width = sceneElement?.clientWidth || window.innerWidth;
 		this.height = sceneElement?.clientHeight || window.innerHeight;
 		this.bee = new Bee(100, 100);
@@ -22,32 +31,47 @@ export class Game {
 			left: false,
 			right: false,
 		};
+	}
 
+	start() {
 		this.setupEventListeners();
 		this.setupAnimation();
+		this.startGameLoop();
 	}
 
 	private setupEventListeners() {
 		window.addEventListener("keydown", (e) => {
-			if (e.key === "ArrowUp") this.keys.up = true;
-			if (e.key === "ArrowDown") this.keys.down = true;
-			if (e.key === "ArrowLeft") this.keys.left = true;
-			if (e.key === "ArrowRight") this.keys.right = true;
+			if (Game.KEYS.up.includes(e.key)) {
+				this.keys.up = true;
+			}
+			if (Game.KEYS.left.includes(e.key)) this.keys.left = true;
+			if (Game.KEYS.right.includes(e.key)) this.keys.right = true;
+
+			e.preventDefault(); // prevent scrolling when space is pressed
 		});
 
 		window.addEventListener("keyup", (e) => {
-			if (e.key === "ArrowUp") this.keys.up = false;
-			if (e.key === "ArrowDown") this.keys.down = false;
-			if (e.key === "ArrowLeft") this.keys.left = false;
-			if (e.key === "ArrowRight") this.keys.right = false;
+			if (Game.KEYS.up.includes(e.key)) this.keys.up = false;
+			if (Game.KEYS.left.includes(e.key)) this.keys.left = false;
+			if (Game.KEYS.right.includes(e.key)) this.keys.right = false;
 		});
 	}
 
 	private setupAnimation() {
-		const ANIMATION_DELAY = 100; // ms
 		setInterval(() => {
 			this.bee.frameIndex = (this.bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
-		}, ANIMATION_DELAY);
+		}, 25);
+	}
+
+	private startGameLoop() {
+		const update = () => {
+			this.update();
+			if (this.rootElement) {
+				this.rootElement.innerHTML = this.render();
+			}
+			requestAnimationFrame(update);
+		};
+		update();
 	}
 
 	update() {

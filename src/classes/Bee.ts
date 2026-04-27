@@ -7,11 +7,8 @@ export class Bee {
 
 	// Constants
 	static readonly SIZE = 76;
-	static readonly GRAVITY = 0.3;
-	static readonly LIFT = -0.7;
 	static readonly MAX_FALL_SPEED = 2;
-	static readonly HORIZONTAL_ACCEL = 0.4;
-	static readonly FRICTION = 0.9;
+	static readonly HORIZONTAL_ACCEL = 0.2;
 	static readonly SPRITE_COLS = 6;
 	static readonly TOTAL_FRAMES = 12;
 
@@ -30,12 +27,12 @@ export class Bee {
 	) {
 		// Physics
 		if (keys.up) {
-			this.vy += Bee.LIFT;
+			this.vy -= 0.8; // lift
 			if (this.vy < -Bee.MAX_FALL_SPEED) {
 				this.vy = -Bee.MAX_FALL_SPEED;
 			}
 		} else {
-			this.vy += Bee.GRAVITY;
+			this.vy += 0.3; // gravity
 		}
 
 		// Limit fall speed
@@ -48,14 +45,13 @@ export class Bee {
 		if (keys.right) this.vx += Bee.HORIZONTAL_ACCEL;
 
 		// Friction
-		this.vx *= Bee.FRICTION;
+		this.vx *= 0.9; // friction
 
 		// Apply velocity to position
 		this.x += this.vx;
 		this.y += this.vy;
 
 		// Collision detection
-		// Left / Right
 		if (this.x < 0) {
 			this.x = 0;
 			this.vx = 0;
@@ -64,14 +60,10 @@ export class Bee {
 			this.x = width - Bee.SIZE;
 			this.vx = 0;
 		}
-
-		// Top
 		if (this.y < 0) {
 			this.y = 0;
 			this.vy = 0;
 		}
-
-		// Floor
 		if (this.y > height - Bee.SIZE) {
 			this.y = height - Bee.SIZE;
 			this.vy = 0;

@@ -4,19 +4,10 @@ import { Game } from "./classes/Game";
 const ROOT = document.getElementById("app");
 
 // Set up CSS variable for sprite size
-const SPRITE_SIZE = 76;
-document.documentElement.style.setProperty("--sprite-size", `${SPRITE_SIZE}px`);
+document.documentElement.style.setProperty("--sprite-size", "76px");
 
 if (!ROOT) throw new Error("Root not found");
 
-// Initialize game
-const GAME = new Game();
-
-// Game loop
-function gameLoop() {
-	GAME.update();
-	ROOT!.innerHTML = GAME.render();
-	requestAnimationFrame(gameLoop);
-}
-
-gameLoop();
+// Initialize and start game
+const game = new Game(ROOT);
+game.start();
