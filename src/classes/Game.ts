@@ -11,12 +11,13 @@ export class Game {
 		right: boolean;
 	};
 	// Constants
+	static readonly SKY_BACKUP_COLOR = "lightblue";
+	static readonly SKY_SCALE = 1.2;
 	static readonly KEY_NAMES = {
-		up: ["ArrowUp", "z", "w", " "],
+		up: ["ArrowUp", "z", "w"],
 		left: ["ArrowLeft", "q", "a"],
 		right: ["ArrowRight", "d"],
 	};
-	static readonly SKY_SCALE = 1.2;
 
 	private canvas: HTMLCanvasElement;
 	private ctx: CanvasRenderingContext2D;
@@ -26,6 +27,7 @@ export class Game {
 	private skyImage: HTMLImageElement;
 	private beeSprite: HTMLImageElement;
 	private groundImage: HTMLImageElement;
+	private groundHeight: number;
 	private imagesLoaded: number = 0;
 	private totalImages: number = 3;
 
@@ -45,7 +47,10 @@ export class Game {
 		this.width = this.canvas.width;
 		this.height = this.canvas.height;
 
-		this.bee = new Bee(100, 100);
+		// Initialize groundHeight with default value
+		this.groundHeight = this.height;
+
+		this.bee = new Bee(100, this.groundHeight - Bee.SIZE);
 		this.keys = { up: false, down: false, left: false, right: false };
 
 		// Resize
@@ -68,6 +73,8 @@ export class Game {
 		this.skyImage.src = "/sprites/sky.png";
 		this.beeSprite.src = "/sprites/bee.png";
 		this.groundImage.src = "/sprites/ground.png";
+
+		this.groundHeight = this.groundImage.naturalHeight - 62;
 	}
 
 	start() {
@@ -107,7 +114,7 @@ export class Game {
 			this.keys,
 			this.width,
 			this.height,
-			this.groundImage.naturalHeight - 62,
+			this.groundHeight,
 		);
 
 		// Camera follows the bee horizontally
@@ -119,7 +126,7 @@ export class Game {
 	draw() {
 		// Wait for images to load
 		if (this.imagesLoaded < this.totalImages) {
-			this.ctx.fillStyle = "lightblue";
+			this.ctx.fillStyle = Game.SKY_BACKUP_COLOR;
 			this.ctx.fillRect(0, 0, this.width, this.height);
 			this.ctx.fillStyle = "black";
 			this.ctx.font = "20px sans-serif";
@@ -128,7 +135,7 @@ export class Game {
 		}
 
 		// Background
-		this.ctx.fillStyle = "lightblue"; // backup color
+		this.ctx.fillStyle = Game.SKY_BACKUP_COLOR;
 		this.ctx.fillRect(0, 0, this.width, this.height);
 
 		// Sky with parallax effect
