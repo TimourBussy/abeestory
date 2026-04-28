@@ -142,7 +142,7 @@ export class Game {
 
 		// Ground
 		const groundW = this.groundImage.naturalWidth;
-		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW) {
+		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW - 1) { // -1 to prevent little weird space
 			this.ctx.drawImage(
 				this.groundImage,
 				x,
