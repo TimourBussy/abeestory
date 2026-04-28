@@ -10,21 +10,24 @@ export class Game {
 		left: boolean;
 		right: boolean;
 	};
+	// Constants
 	static readonly KEY_NAMES = {
 		up: ["ArrowUp", "z", "w", " "],
 		left: ["ArrowLeft", "q", "a"],
 		right: ["ArrowRight", "d"],
 	};
+	static readonly SKY_SCALE = 1.2;
 
 	private canvas: HTMLCanvasElement;
 	private ctx: CanvasRenderingContext2D;
 	private rootElement: HTMLElement;
 
 	// Images
+	private skyImage: HTMLImageElement;
 	private beeSprite: HTMLImageElement;
 	private groundImage: HTMLImageElement;
 	private imagesLoaded: number = 0;
-	private totalImages: number = 2;
+	private totalImages: number = 3;
 
 	// Camera
 	private cameraX: number = 0;
@@ -56,10 +59,13 @@ export class Game {
 		// Load images
 		this.beeSprite = new Image();
 		this.groundImage = new Image();
+		this.skyImage = new Image();
 
 		this.beeSprite.onload = () => this.imagesLoaded++;
 		this.groundImage.onload = () => this.imagesLoaded++;
+		this.skyImage.onload = () => this.imagesLoaded++;
 
+		this.skyImage.src = "/sprites/sky.png";
 		this.beeSprite.src = "/sprites/bee.png";
 		this.groundImage.src = "/sprites/ground.png";
 	}
@@ -107,26 +113,37 @@ export class Game {
 	}
 
 	draw() {
-		const ctx = this.ctx;
-
 		// Wait for images to load
 		if (this.imagesLoaded < this.totalImages) {
-			ctx.fillStyle = "lightblue";
-			ctx.fillRect(0, 0, this.width, this.height);
-			ctx.fillStyle = "black";
-			ctx.font = "20px sans-serif";
-			ctx.fillText("Loading...", this.width / 2 - 50, this.height / 2);
+			this.ctx.fillStyle = "lightblue";
+			this.ctx.fillRect(0, 0, this.width, this.height);
+			this.ctx.fillStyle = "black";
+			this.ctx.font = "20px sans-serif";
+			this.ctx.fillText("Loading...", this.width / 2 - 50, this.height / 2);
 			return;
 		}
 
-		// Fond
-		ctx.fillStyle = "lightblue";
-		ctx.fillRect(0, 0, this.width, this.height);
+		// Background
+		this.ctx.fillStyle = "lightblue"; // backup color
+		this.ctx.fillRect(0, 0, this.width, this.height);
+
+		// Sky with parallax effect
+		const skyW = this.skyImage.naturalWidth * Game.SKY_SCALE;
+		for (let x = -(this.cameraX * 0.05) % skyW; x < this.width; x += skyW) {
+			// 0.05 = 5% of camera speed
+			this.ctx.drawImage(
+				this.skyImage,
+				x,
+				0,
+				skyW,
+				this.skyImage.naturalHeight * Game.SKY_SCALE,
+			);
+		}
 
 		// Ground
 		const groundW = this.groundImage.naturalWidth;
 		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW) {
-			ctx.drawImage(
+			this.ctx.drawImage(
 				this.groundImage,
 				x,
 				this.height - this.groundImage.naturalHeight,
@@ -140,11 +157,11 @@ export class Game {
 		const col = this.bee.frameIndex % Bee.SPRITE_COLS;
 		const row = Math.floor(this.bee.frameIndex / Bee.SPRITE_COLS);
 
-		ctx.save();
+		this.ctx.save();
 		if (this.bee.direction === -1) {
-			ctx.translate(screenX + Bee.SIZE, screenY);
-			ctx.scale(-1, 1);
-			ctx.drawImage(
+			this.ctx.translate(screenX + Bee.SIZE, screenY);
+			this.ctx.scale(-1, 1);
+			this.ctx.drawImage(
 				this.beeSprite,
 				col * Bee.FRAME_W,
 				row * Bee.FRAME_H, // position in the spritesheet
@@ -156,7 +173,7 @@ export class Game {
 				Bee.SIZE, // displayed size
 			);
 		} else {
-			ctx.drawImage(
+			this.ctx.drawImage(
 				this.beeSprite,
 				col * Bee.FRAME_W,
 				row * Bee.FRAME_H,
@@ -168,6 +185,6 @@ export class Game {
 				Bee.SIZE,
 			);
 		}
-		ctx.restore();
+		this.ctx.restore();
 	}
 }
