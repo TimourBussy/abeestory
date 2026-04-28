@@ -10,8 +10,17 @@ export class Bee extends Sprite {
 	static readonly SPRITE_COLS = 6;
 	static readonly TOTAL_FRAMES = 12;
 
+	frameIndex: number;
+	direction: 1 | -1;
+	vx: number;
+	vy: number;
+
 	constructor(x: number = 0, y: number = 0) {
 		super(x, y);
+		this.frameIndex = 0;
+		this.direction = 1;
+		this.vx = 0;
+		this.vy = 0;
 	}
 
 	update(
@@ -70,12 +79,5 @@ export class Bee extends Sprite {
 			this.y = floor;
 			this.vy = 0;
 		}
-	}
-
-	getBackgroundPosition(): { x: number; y: number } {
-		return {
-			x: -(this.frameIndex % Bee.SPRITE_COLS) * Bee.SIZE,
-			y: -Math.floor(this.frameIndex / Bee.SPRITE_COLS) * Bee.SIZE,
-		};
 	}
 }

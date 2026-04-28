@@ -1,4 +1,5 @@
 import { Bee } from "./Bee";
+import { NPC } from "./NPC";
 
 export class Game {
 	bee: Bee;
@@ -24,12 +25,14 @@ export class Game {
 	private rootElement: HTMLElement;
 
 	// Images
-	private skyImage: HTMLImageElement;
-	private beeSprite: HTMLImageElement;
-	private groundImage: HTMLImageElement;
-	private groundHeight: number;
-	private imagesLoaded: number = 0;
-	private totalImages: number = 3;
+	private skyImage: HTMLImageElement | null = null;
+	private beeSprite: HTMLImageElement | null = null;
+	private groundImage: HTMLImageElement | null = null;
+	private npcImages: Map<string, HTMLImageElement> = new Map();
+	private groundHeight: number = 62; // valeur par défaut jusqu'au chargement
+
+	// NPCs
+	private npcs: NPC[] = [];
 
 	// Camera
 	private cameraX: number = 0;
@@ -47,10 +50,7 @@ export class Game {
 		this.width = this.canvas.width;
 		this.height = this.canvas.height;
 
-		// Initialize groundHeight with default value
-		this.groundHeight = this.height;
-
-		this.bee = new Bee(100, this.groundHeight - Bee.SIZE);
+		this.bee = new Bee(100, this.height - Bee.SIZE - this.groundHeight);
 		this.keys = { up: false, down: false, left: false, right: false };
 
 		// Resize
@@ -61,20 +61,37 @@ export class Game {
 			this.height = this.canvas.height;
 		});
 
-		// Load images
-		this.beeSprite = new Image();
-		this.groundImage = new Image();
-		this.skyImage = new Image();
+		// Create NPCs
+		this.npcs.push(new NPC(500, "Hello World!", "/sprites/npc1.png", 1));
 
-		this.beeSprite.onload = () => this.imagesLoaded++;
-		this.groundImage.onload = () => this.imagesLoaded++;
-		this.skyImage.onload = () => this.imagesLoaded++;
+		// Load all images via Promise.all
+		(async (): Promise<void> => {
+			// Collect unique NPC image sources
+			const npcSrcs = [...new Set(this.npcs.map((npc) => npc.imageSrc))];
 
-		this.skyImage.src = "/sprites/sky.png";
-		this.beeSprite.src = "/sprites/bee.png";
-		this.groundImage.src = "/sprites/ground.png";
+			const [sky, bee, ground, ...npcImgs] = await Promise.all([
+				this.loadImage("/sprites/sky.png"),
+				this.loadImage("/sprites/bee.png"),
+				this.loadImage("/sprites/ground.png"),
+				...npcSrcs.map((src) => this.loadImage(src)),
+			]);
 
-		this.groundHeight = this.groundImage.naturalHeight - 62;
+			this.skyImage = sky;
+			this.beeSprite = bee;
+			this.groundImage = ground;
+			this.groundHeight = ground.naturalHeight - 62;
+
+			npcSrcs.forEach((src, i) => this.npcImages.set(src, npcImgs[i]));
+		})();
+	}
+
+	private loadImage(src: string): Promise<HTMLImageElement> {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			img.onload = () => resolve(img);
+			img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+			img.src = src;
+		});
 	}
 
 	start() {
@@ -96,7 +113,7 @@ export class Game {
 			if (this.keys.up || this.keys.left || this.keys.right) {
 				this.bee.frameIndex = (this.bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
 			} else {
-				this.bee.frameIndex = 2;
+				this.bee.frameIndex = 2; // sleeping frame
 			}
 		}, 25);
 
@@ -111,33 +128,42 @@ export class Game {
 
 	update() {
 		this.bee.update(this.keys, this.width, this.height, this.groundHeight);
+		this.npcs.forEach((npc) => {
+			const npcImage = this.npcImages.get(npc.imageSrc);
+			if (npcImage) {
+				npc.y =
+					this.height - npcImage.naturalHeight * npc.scale - this.groundHeight;
+			}
+			npc.update();
+		});
 
 		// Camera follows the bee horizontally
 		this.cameraX +=
-			(this.bee.x - this.width / 2 + Bee.SIZE / 2 - this.cameraX) * 0.1; // smooth follow
+			(this.bee.x - this.width / 2 + Bee.SIZE / 2 - this.cameraX) * 0.1;
 		if (this.cameraX < 0) this.cameraX = 0;
 	}
 
 	draw() {
-		// Wait for images to load
-		if (this.imagesLoaded < this.totalImages) {
-			this.ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-			this.ctx.fillRect(0, 0, this.width, this.height);
-			this.ctx.fillStyle = "black";
-			this.ctx.font = "20px sans-serif";
-			this.ctx.fillText("Loading...", this.width / 2 - 50, this.height / 2);
+		const ctx = this.ctx;
+
+		// Loading screen
+		if (!(this.skyImage && this.beeSprite && this.groundImage)) {
+			ctx.fillStyle = Game.SKY_BACKUP_COLOR;
+			ctx.fillRect(0, 0, this.width, this.height);
+			ctx.fillStyle = "black";
+			ctx.font = "20px sans-serif";
+			ctx.fillText("Loading...", this.width / 2 - 50, this.height / 2);
 			return;
 		}
 
 		// Background
-		this.ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-		this.ctx.fillRect(0, 0, this.width, this.height);
+		ctx.fillStyle = Game.SKY_BACKUP_COLOR;
+		ctx.fillRect(0, 0, this.width, this.height);
 
 		// Sky with parallax effect
 		const skyW = this.skyImage.naturalWidth * Game.SKY_SCALE;
 		for (let x = -(this.cameraX * 0.05) % skyW; x < this.width; x += skyW) {
-			// 0.05 = 5% of camera speed
-			this.ctx.drawImage(
+			ctx.drawImage(
 				this.skyImage,
 				x,
 				0,
@@ -149,8 +175,7 @@ export class Game {
 		// Ground
 		const groundW = this.groundImage.naturalWidth;
 		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW - 1) {
-			// -1 to prevent little weird space
-			this.ctx.drawImage(
+			ctx.drawImage(
 				this.groundImage,
 				x,
 				this.height - this.groundImage.naturalHeight,
@@ -160,27 +185,26 @@ export class Game {
 		// Bee
 		const screenX = this.bee.x - this.cameraX;
 		const screenY = this.bee.y;
-
 		const col = this.bee.frameIndex % Bee.SPRITE_COLS;
 		const row = Math.floor(this.bee.frameIndex / Bee.SPRITE_COLS);
 
-		this.ctx.save();
+		ctx.save();
 		if (this.bee.direction === -1) {
-			this.ctx.translate(screenX + Bee.SIZE, screenY);
-			this.ctx.scale(-1, 1);
-			this.ctx.drawImage(
+			ctx.translate(screenX + Bee.SIZE, screenY);
+			ctx.scale(-1, 1);
+			ctx.drawImage(
 				this.beeSprite,
 				col * Bee.FRAME_W,
-				row * Bee.FRAME_H, // position in the spritesheet
+				row * Bee.FRAME_H,
 				Bee.FRAME_W,
-				Bee.FRAME_H, // size of one frame in the spritesheet
+				Bee.FRAME_H,
 				0,
-				0, // destination
+				0,
 				Bee.SIZE,
-				Bee.SIZE, // displayed size
+				Bee.SIZE,
 			);
 		} else {
-			this.ctx.drawImage(
+			ctx.drawImage(
 				this.beeSprite,
 				col * Bee.FRAME_W,
 				row * Bee.FRAME_H,
@@ -192,6 +216,24 @@ export class Game {
 				Bee.SIZE,
 			);
 		}
-		this.ctx.restore();
+		ctx.restore();
+
+		// NPCs
+		this.npcs.forEach((npc) => {
+			const npcImage = this.npcImages.get(npc.imageSrc);
+			if (!npcImage) return;
+
+			ctx.drawImage(
+				npcImage,
+				0,
+				0,
+				npcImage.naturalWidth,
+				npcImage.naturalHeight,
+				npc.x - this.cameraX,
+				this.height - npcImage.naturalHeight * npc.scale - this.groundHeight,
+				npcImage.naturalWidth * npc.scale,
+				npcImage.naturalHeight * npc.scale,
+			);
+		});
 	}
 }
