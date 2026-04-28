@@ -6,7 +6,7 @@ export class Bee extends Sprite {
 	static readonly FRAME_H = 152;
 	static readonly SIZE = 76;
 	static readonly MAX_FALL_SPEED = 4;
-	static readonly HORIZONTAL_ACCEL = 0.5;
+	static readonly HORIZONTAL_ACCEL = 0.3;
 	static readonly SPRITE_COLS = 6;
 	static readonly TOTAL_FRAMES = 12;
 

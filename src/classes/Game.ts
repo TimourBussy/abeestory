@@ -86,8 +86,12 @@ export class Game {
 
 		// Setup animation
 		setInterval(() => {
-			this.bee.frameIndex = (this.bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
-		}, 100);
+			if (this.keys.up || this.keys.left || this.keys.right) {
+				this.bee.frameIndex = (this.bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
+			} else {
+				this.bee.frameIndex = 2;
+			}
+		}, 25);
 
 		// Start game loop
 		const loop = () => {
@@ -142,7 +146,8 @@ export class Game {
 
 		// Ground
 		const groundW = this.groundImage.naturalWidth;
-		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW - 1) { // -1 to prevent little weird space
+		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW - 1) {
+			// -1 to prevent little weird space
 			this.ctx.drawImage(
 				this.groundImage,
 				x,
