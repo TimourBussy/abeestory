@@ -13,10 +13,10 @@ export class Game {
 	// Constants
 	static readonly SKY_BACKUP_COLOR = "lightblue";
 	static readonly SKY_SCALE = 1.2;
-	static readonly KEY_NAMES = {
-		up: ["ArrowUp", "z", "w"],
-		left: ["ArrowLeft", "q", "a"],
-		right: ["ArrowRight", "d"],
+	static readonly KEY_CODES = {
+		up: ["ArrowUp", "KeyW"],
+		left: ["ArrowLeft", "KeyA"],
+		right: ["ArrowRight", "KeyD"],
 	};
 
 	private canvas: HTMLCanvasElement;
@@ -80,15 +80,15 @@ export class Game {
 	start() {
 		// Setup event listeners
 		window.addEventListener("keydown", (e) => {
-			if (Game.KEY_NAMES.up.includes(e.key)) this.keys.up = true;
-			if (Game.KEY_NAMES.left.includes(e.key)) this.keys.left = true;
-			if (Game.KEY_NAMES.right.includes(e.key)) this.keys.right = true;
+			if (Game.KEY_CODES.up.includes(e.code)) this.keys.up = true;
+			if (Game.KEY_CODES.left.includes(e.code)) this.keys.left = true;
+			if (Game.KEY_CODES.right.includes(e.code)) this.keys.right = true;
 			e.preventDefault();
 		});
 		window.addEventListener("keyup", (e) => {
-			if (Game.KEY_NAMES.up.includes(e.key)) this.keys.up = false;
-			if (Game.KEY_NAMES.left.includes(e.key)) this.keys.left = false;
-			if (Game.KEY_NAMES.right.includes(e.key)) this.keys.right = false;
+			if (Game.KEY_CODES.up.includes(e.code)) this.keys.up = false;
+			if (Game.KEY_CODES.left.includes(e.code)) this.keys.left = false;
+			if (Game.KEY_CODES.right.includes(e.code)) this.keys.right = false;
 		});
 
 		// Setup animation
@@ -110,12 +110,7 @@ export class Game {
 	}
 
 	update() {
-		this.bee.update(
-			this.keys,
-			this.width,
-			this.height,
-			this.groundHeight,
-		);
+		this.bee.update(this.keys, this.width, this.height, this.groundHeight);
 
 		// Camera follows the bee horizontally
 		this.cameraX +=
