@@ -12,6 +12,7 @@ export class Game {
 		right: boolean;
 	};
 	// Constants
+	static readonly WORLD_WIDTH = 5000;
 	static readonly SKY_BACKUP_COLOR = "lightblue";
 	static readonly SKY_SCALE = 1.2;
 	static readonly KEY_CODES = {
@@ -50,9 +51,6 @@ export class Game {
 		this.width = this.canvas.width;
 		this.height = this.canvas.height;
 
-		this.bee = new Bee(100, this.height - Bee.SIZE - this.groundHeight);
-		this.keys = { up: false, down: false, left: false, right: false };
-
 		// Resize
 		window.addEventListener("resize", () => {
 			this.canvas.width = window.innerWidth;
@@ -62,7 +60,11 @@ export class Game {
 		});
 
 		// Create NPCs
-		this.npcs.push(new NPC(500, "Hello World!", "/sprites/npc1.png", 1));
+		this.npcs.push(new NPC(1200, "Hello World!", "/sprites/npc1.png"));
+
+		// Create bee
+		this.bee = new Bee(100, this.height - Bee.SIZE - this.groundHeight);
+		this.keys = { up: false, down: false, left: false, right: false };
 
 		// Load all images via Promise.all
 		(async (): Promise<void> => {
@@ -127,12 +129,17 @@ export class Game {
 	}
 
 	update() {
-		this.bee.update(this.keys, this.width, this.height, this.groundHeight);
+		this.bee.update(
+			this.keys,
+			Game.WORLD_WIDTH,
+			this.height,
+			this.groundHeight,
+		);
 		this.npcs.forEach((npc) => {
 			const npcImage = this.npcImages.get(npc.imageSrc);
 			if (npcImage) {
 				npc.y =
-					this.height - npcImage.naturalHeight * npc.scale - this.groundHeight;
+					this.height - npcImage.naturalHeight * npc.scale - this.groundHeight - npc.randomYOffset;
 			}
 			npc.update();
 		});
@@ -182,6 +189,24 @@ export class Game {
 			);
 		}
 
+		// NPCs
+		this.npcs.forEach((npc) => {
+			const npcImage = this.npcImages.get(npc.imageSrc);
+			if (!npcImage) return;
+
+			ctx.drawImage(
+				npcImage,
+				0,
+				0,
+				npcImage.naturalWidth,
+				npcImage.naturalHeight,
+				npc.x - this.cameraX,
+				npc.y,
+				npcImage.naturalWidth * npc.scale,
+				npcImage.naturalHeight * npc.scale,
+			);
+		});
+
 		// Bee
 		const screenX = this.bee.x - this.cameraX;
 		const screenY = this.bee.y;
@@ -217,23 +242,5 @@ export class Game {
 			);
 		}
 		ctx.restore();
-
-		// NPCs
-		this.npcs.forEach((npc) => {
-			const npcImage = this.npcImages.get(npc.imageSrc);
-			if (!npcImage) return;
-
-			ctx.drawImage(
-				npcImage,
-				0,
-				0,
-				npcImage.naturalWidth,
-				npcImage.naturalHeight,
-				npc.x - this.cameraX,
-				this.height - npcImage.naturalHeight * npc.scale - this.groundHeight,
-				npcImage.naturalWidth * npc.scale,
-				npcImage.naturalHeight * npc.scale,
-			);
-		});
 	}
 }
