@@ -1,0 +1,12 @@
+{
+	"name": "face-cropper",
+	"version": "1.0.0",
+	"description": "Interactive face image cropper tool",
+	"scripts": {
+		"build": "tsc"
+	},
+	"devDependencies": {
+		"@types/node": "^20.3.1",
+		"typescript": "^5.1.3"
+	}
+}

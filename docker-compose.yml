@@ -12,3 +12,17 @@ services:
     environment:
       - NODE_ENV=development
     restart: unless-stopped
+
+  face-cropper:
+    build:
+      context: ./tools/face-cropper
+      dockerfile: Dockerfile
+    container_name: face-cropper
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./public/sprites:/app/public/sprites
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    restart: unless-stopped

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Face Cropper Tool</title>
+		<link rel="stylesheet" href="style.css" />
+	</head>
+	<body>
+		<div class="container">
+			<h1>🎨 Face Cropper Tool</h1>
+			<p class="subtitle">Select your image and crop the face area</p>
+
+			<div class="main-content">
+				<div class="upload-section">
+					<label for="imageInput" class="file-label">
+						<span>📁 Choose Image</span>
+						<input
+							type="file"
+							id="imageInput"
+							accept="image/*"
+							style="display: none"
+						/>
+					</label>
+					<p class="info-text" id="filenameDisplay">No image selected</p>
+				</div>
+
+				<div class="canvas-section" id="canvasSection" style="display: none">
+					<div class="canvas-wrapper">
+						<canvas id="canvas"></canvas>
+						<div class="crop-overlay">
+							<div class="crop-box" id="cropBox"></div>
+						</div>
+					</div>
+
+					<div class="preview-section">
+						<h3>Preview</h3>
+						<canvas id="previewCanvas" class="preview-canvas"></canvas>
+					</div>
+
+					<div class="controls">
+						<div class="slider-group">
+							<label for="cropSizeSlider">Crop Size:</label>
+							<input
+								type="range"
+								id="cropSizeSlider"
+								min="50"
+								max="600"
+								value="200"
+							/>
+							<span id="cropSizeValue">200px</span>
+						</div>
+
+						<div class="button-group">
+							<button id="saveBtn" class="btn btn-success">💾 Save as PNG</button>
+							<button id="resetBtn" class="btn btn-secondary">🔄 Reset</button>
+							<button id="newImageBtn" class="btn btn-secondary">
+								📷 New Image
+							</button>
+						</div>
+					</div>
+
+					<div id="status" class="status"></div>
+				</div>
+
+				<div id="initialState" class="initial-state">
+					<p>👆 Start by selecting an image</p>
+				</div>
+			</div>
+		</div>
+
+		<script src="script.js"></script>
+	</body>
+</html>
