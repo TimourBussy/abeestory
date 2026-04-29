@@ -13,6 +13,8 @@ export class Game {
 	};
 	// Constants
 	static readonly WORLD_WIDTH = 5000;
+	static readonly GAME_WIDTH = 1280;
+	static readonly GAME_HEIGHT = 720;
 	static readonly SKY_BACKUP_COLOR = "lightblue";
 	static readonly SKY_SCALE = 1.2;
 	static readonly KEY_CODES = {
@@ -43,21 +45,13 @@ export class Game {
 
 		// Canvas setup
 		this.canvas = document.createElement("canvas");
-		this.canvas.width = window.innerWidth;
-		this.canvas.height = window.innerHeight;
+		this.canvas.width = Game.GAME_WIDTH;
+		this.canvas.height = Game.GAME_HEIGHT;
 		this.rootElement.appendChild(this.canvas);
 
 		this.ctx = this.canvas.getContext("2d")!;
-		this.width = this.canvas.width;
-		this.height = this.canvas.height;
-
-		// Resize
-		window.addEventListener("resize", () => {
-			this.canvas.width = window.innerWidth;
-			this.canvas.height = window.innerHeight;
-			this.width = this.canvas.width;
-			this.height = this.canvas.height;
-		});
+		this.width = Game.GAME_WIDTH;
+		this.height = Game.GAME_HEIGHT;
 
 		// Create NPCs
 		this.npcs.push(new NPC(1200, "Hello World!", "/sprites/npc1.png"));
@@ -139,7 +133,10 @@ export class Game {
 			const npcImage = this.npcImages.get(npc.imageSrc);
 			if (npcImage) {
 				npc.y =
-					this.height - npcImage.naturalHeight * npc.scale - this.groundHeight - npc.randomYOffset;
+					this.height -
+					npcImage.naturalHeight * npc.scale -
+					this.groundHeight -
+					npc.randomYOffset;
 			}
 			npc.update();
 		});
