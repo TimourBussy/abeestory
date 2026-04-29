@@ -55,7 +55,7 @@ export class Game {
 		this._height = Game.GAME_HEIGHT;
 
 		// Create NPCs
-		this._npcs.push(new NPC(1000, ["Hello World!"], "/sprites/npc1.png"));
+		this._npcs.push(new NPC(1000, ["Hello World!"], "/sprites/npc1.png", 18, 0));
 
 		// Create bee
 		this._bee = new Bee(100, this._height - Bee.SIZE - this._groundHeight);
@@ -205,8 +205,8 @@ export class Game {
 			if (!npc.isNearBee(this._bee)) return;
 
 			const indicatorX =
-				npc.x - this._cameraX + (npcImage.naturalWidth * npc.scale) / 2;
-			const indicatorY = npc.y - 20 + Math.sin(this._tick * 0.1) * 4; // up and down movement
+				npc.x - this._cameraX + (npcImage.naturalWidth * npc.scale) / 2 + npc.triangleOffsetX;
+			const indicatorY = npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
 
 			// Draw little triangle indicator above NPC
 			ctx.save();

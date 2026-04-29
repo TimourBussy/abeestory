@@ -4,16 +4,20 @@ import { Sprite } from "./Sprite";
 export class NPC extends Sprite {
 	static readonly NEARBY_DISTANCE = 125;
 
-	private _message: string[];
-
 	private _imageSrc: string;
 	private _scale: number;
 	private _randomYOffset: number;
+
+	private _triangleOffsetX: number; // (for better align with the npc sprite)
+	private _triangleOffsetY: number;
+	private _message: string[];
 
 	constructor(
 		x: number,
 		message: string[],
 		imageSrc: string,
+		triangleOffsetX: number = 0,
+		triangleOffsetY: number = 0,
 		scale: number = Math.random() * 0.1 + 0.95, // Random scale between 0.95 and 1.05
 	) {
 		super(x, 0); // y will be set later based on ground level
@@ -21,6 +25,8 @@ export class NPC extends Sprite {
 		this._imageSrc = imageSrc;
 		this._scale = scale;
 		this._randomYOffset = Math.random() * 10;
+		this._triangleOffsetX = triangleOffsetX;
+		this._triangleOffsetY = triangleOffsetY;
 	}
 
 	get imageSrc(): string {
@@ -37,6 +43,14 @@ export class NPC extends Sprite {
 
 	get message(): string[] {
 		return this._message;
+	}
+
+	get triangleOffsetX(): number {
+		return this._triangleOffsetX;
+	}
+
+	get triangleOffsetY(): number {
+		return this._triangleOffsetY;
 	}
 
 	// Verify if the bee is nearby
