@@ -41,6 +41,7 @@ export class Game {
 	private _groundImage: HTMLImageElement | null = null;
 	private _textboxImage: HTMLImageElement | null = null;
 	private _npcImages: Map<string, HTMLImageElement> = new Map();
+	private _npcFaceImages: Map<string, HTMLImageElement> = new Map();
 	private _groundHeight: number = 62; // default value until ground image is loaded
 
 	// ============ GAME WORLD (Actors) ============
@@ -114,6 +115,22 @@ export class Game {
 			this._groundHeight = ground.naturalHeight - 62;
 
 			npcSrcs.forEach((src, i) => this._npcImages.set(src, npcImgs[i]));
+
+			// Load NPC face images if they exist
+			const faceSrcs = npcSrcs.map((src) => {
+				const name = src.split("/").pop()?.split(".")[0];
+				return `/sprites/${name}_face.png`;
+			});
+
+			const faceImgs = await Promise.allSettled(
+				faceSrcs.map((src) => this.loadImage(src)),
+			);
+
+			faceImgs.forEach((result, i) => {
+				if (result.status === "fulfilled") {
+					this._npcFaceImages.set(npcSrcs[i], result.value);
+				}
+			});
 		})();
 	}
 
@@ -315,33 +332,6 @@ export class Game {
 
 		// Draw textbox if dialog is active
 		if (this._dialogManager.activeDialogNPC && this._textboxImage) {
-			const textboxWidth = this._width * 0.75;
-			const aspectRatio =
-				this._textboxImage.naturalHeight / this._textboxImage.naturalWidth;
-			const textboxHeight = textboxWidth * aspectRatio; // Auto-scale height to maintain aspect ratio
-			const textboxX = (this._width - textboxWidth) / 2;
-			const textboxY = this._height - textboxHeight; // Bottom of screen
-
-			// Draw textbox background
-			ctx.drawImage(
-				this._textboxImage,
-				textboxX,
-				textboxY,
-				textboxWidth,
-				textboxHeight,
-			);
-
-			// Draw text (message[0])
-			const text = this._dialogManager.activeDialogNPC.message[0];
-			ctx.fillStyle = "black";
-			ctx.font = "16px Arial";
-			ctx.textBaseline = "top";
-
-			ctx.fillText(text, textboxX + 20, textboxY + 20); // Padding inside textbox
-		}
-
-		// DEBUG - DISPLAY TEXTBOX
-		if (this._npcs[0].message && this._textboxImage) {
 			const textboxWidth = this._width * 0.6;
 			const textboxHeight =
 				textboxWidth *
@@ -358,27 +348,28 @@ export class Game {
 				textboxHeight,
 			);
 
-			// Draw NPC head (top portion of NPC image) on the left
-			const npcImage = this._npcImages.get(this._npcs[0].imageSrc);
-			if (npcImage) {
-				// Crop more of the NPC image vertically (head area)
-				const headHeight = npcImage.naturalHeight * 0.47; // Increase this value to show more (0.6, 0.7, 0.75, etc.)
-				
-				// Position head on left side of textbox
-				const headDisplayHeight = textboxHeight * 0.38;
-				const headDisplayWidth = (npcImage.naturalWidth / headHeight) * headDisplayHeight; // Maintain aspect ratio
+			// Draw NPC head (face image if available)
+			const npcFaceImage = this._npcFaceImages.get(this._npcs[0].imageSrc);
+			if (npcFaceImage) {
+				// Simple square image - just position and draw
+				const faceSize = textboxHeight * 0.53; // 80% of textbox height
+				const faceX = textboxX + textboxWidth * 0.081;
+				const faceY = textboxY + textboxHeight * 0.227;
+				const faceW = faceSize * 0.951; // reduce width to fit better in the face frame
+				const faceH = faceSize;
 
-				ctx.drawImage(
-					npcImage,
-					0, // source x
-					0, // source y
-					npcImage.naturalWidth, // source width
-					headHeight, // source height
-					textboxX + (textboxWidth - headDisplayWidth) / 2 - 268, // destination x - centered
-					textboxY + textboxHeight - headDisplayHeight - 63, // destination y - anchored at bottom
-					headDisplayWidth, // destination width - maintain aspect ratio
-					headDisplayHeight, // destination height (stays same size)
-				);
+				ctx.save();
+				ctx.beginPath();
+				ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
+				ctx.clip();
+
+				// DEBUG: Background to visualize positioning
+				// ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+				// ctx.fillRect(faceX, faceY, faceW, faceH);
+
+				ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
+
+				ctx.restore();
 			}
 
 			// Draw text
@@ -410,6 +401,78 @@ export class Game {
 				textboxY + textboxHeight * 0.4,
 			);
 		}
+
+		// DEBUG - DISPLAY TEXTBOX
+		// if (this._npcs[0].message && this._textboxImage) {
+		// 	const textboxWidth = this._width * 0.6;
+		// 	const textboxHeight =
+		// 		textboxWidth *
+		// 		(this._textboxImage.naturalHeight / this._textboxImage.naturalWidth); // Auto-scale height to maintain aspect ratio
+		// 	const textboxX = (this._width - textboxWidth) / 2;
+		// 	const textboxY = this._height - textboxHeight;
+
+		// 	// Draw textbox background
+		// 	ctx.drawImage(
+		// 		this._textboxImage,
+		// 		textboxX,
+		// 		textboxY,
+		// 		textboxWidth,
+		// 		textboxHeight,
+		// 	);
+
+		// 	// Draw NPC head (face image if available)
+		// 	const npcFaceImage = this._npcFaceImages.get(this._npcs[0].imageSrc);
+		// 	if (npcFaceImage) {
+		// 		// Simple square image - just position and draw
+		// 		const faceSize = textboxHeight * 0.53; // 80% of textbox height
+		// 		const faceX = textboxX + textboxWidth * 0.081;
+		// 		const faceY = textboxY + textboxHeight * 0.227;
+		// 		const faceW = faceSize * 0.951; // reduce width to fit better in the face frame
+		// 		const faceH = faceSize;
+
+		// 		ctx.save();
+		// 		ctx.beginPath();
+		// 		ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
+		// 		ctx.clip();
+
+		// 		// DEBUG: Background to visualize positioning
+		// 		// ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+		// 		// ctx.fillRect(faceX, faceY, faceW, faceH);
+
+		// 		ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
+
+		// 		ctx.restore();
+		// 	}
+
+		// 	// Draw text
+		// 	ctx.fillStyle = "yellow";
+		// 	ctx.font = `bold ${Math.round(
+		// 		// Fit NPC name to available width
+		// 		this.fitTextToWidth(
+		// 			ctx,
+		// 			this._npcs[0].name,
+		// 			textboxWidth * 0.23,
+		// 			Math.round((textboxWidth / 960) * 21),
+		// 		),
+		// 	)}px Papyrus`;
+		// 	ctx.textBaseline = "middle";
+		// 	ctx.textAlign = "center";
+		// 	ctx.fillText(
+		// 		this._npcs[0].name,
+		// 		textboxX + textboxWidth * 0.396,
+		// 		textboxY + textboxHeight * 0.259,
+		// 	);
+
+		// 	ctx.fillStyle = "black";
+		// 	ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
+		// 	ctx.textBaseline = "top";
+		// 	ctx.textAlign = "left";
+		// 	ctx.fillText(
+		// 		this._npcs[0].message[0],
+		// 		textboxX + textboxWidth * 0.29,
+		// 		textboxY + textboxHeight * 0.4,
+		// 	);
+		// }
 	}
 
 	/**

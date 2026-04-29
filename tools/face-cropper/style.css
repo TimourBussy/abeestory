@@ -186,6 +186,7 @@ h1 {
 	border-radius: 3px;
 	background: #ddd;
 	outline: none;
+  appearance: none;
 	-webkit-appearance: none;
 }
 
