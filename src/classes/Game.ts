@@ -54,8 +54,21 @@ export class Game {
 		this._width = Game.GAME_WIDTH;
 		this._height = Game.GAME_HEIGHT;
 
+		window.addEventListener("resize", () => {
+			const scale = Math.min(
+				window.innerWidth / Game.GAME_WIDTH,
+				window.innerHeight / Game.GAME_HEIGHT,
+			);
+			this._canvas.style.width = `${Game.GAME_WIDTH * scale}px`;
+			this._canvas.style.height = `${Game.GAME_HEIGHT * scale}px`;
+		});
+		// Immediate trigger to set initial canvas size
+		window.dispatchEvent(new Event("resize"));
+
 		// Create NPCs
-		this._npcs.push(new NPC(1000, ["Hello World!"], "/sprites/npc1.png", 18, 0));
+		this._npcs.push(
+			new NPC(1000, ["Hello World!"], "/sprites/npc1.png", 18, 0),
+		);
 
 		// Create bee
 		this._bee = new Bee(100, this._height - Bee.SIZE - this._groundHeight);
@@ -116,7 +129,9 @@ export class Game {
 
 		// Start game loop
 		const loop = (timestamp: number) => {
-			const dt = this._lastTime ? (timestamp - this._lastTime) / (1000 / 60) : 1;
+			const dt = this._lastTime
+				? (timestamp - this._lastTime) / (1000 / 60)
+				: 1;
 			this._lastTime = timestamp;
 			this.update(dt);
 			this.draw();
@@ -126,7 +141,13 @@ export class Game {
 	}
 
 	update(dt: number = 1) {
-    this._bee.update(this._keys, Game.WORLD_WIDTH, this._height, this._groundHeight, dt);
+		this._bee.update(
+			this._keys,
+			Game.WORLD_WIDTH,
+			this._height,
+			this._groundHeight,
+			dt,
+		);
 		this._npcs.forEach((npc) => {
 			const npcImage = this._npcImages.get(npc.imageSrc);
 			if (npcImage) {
@@ -140,7 +161,8 @@ export class Game {
 		});
 
 		// Camera follows the bee horizontally
-		this._cameraX += (this._bee.x - this._width / 2 + Bee.SIZE / 2 - this._cameraX) * 0.1 * dt;
+		this._cameraX +=
+			(this._bee.x - this._width / 2 + Bee.SIZE / 2 - this._cameraX) * 0.1 * dt;
 		if (this._cameraX < 0) this._cameraX = 0;
 
 		this._tick += dt;
@@ -177,7 +199,11 @@ export class Game {
 
 		// Ground
 		const groundW = this._groundImage.naturalWidth;
-		for (let x = -(this._cameraX % groundW); x < this._width; x += groundW - 1) {
+		for (
+			let x = -(this._cameraX % groundW);
+			x < this._width;
+			x += groundW - 1
+		) {
 			ctx.drawImage(
 				this._groundImage,
 				x,
@@ -205,8 +231,12 @@ export class Game {
 			if (!npc.isNearBee(this._bee)) return;
 
 			const indicatorX =
-				npc.x - this._cameraX + (npcImage.naturalWidth * npc.scale) / 2 + npc.triangleOffsetX;
-			const indicatorY = npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
+				npc.x -
+				this._cameraX +
+				(npcImage.naturalWidth * npc.scale) / 2 +
+				npc.triangleOffsetX;
+			const indicatorY =
+				npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
 
 			// Draw little triangle indicator above NPC
 			ctx.save();
