@@ -1,5 +1,6 @@
 import { Bee } from "./Bee";
 import { NPC } from "./NPC";
+import { DialogManager } from "./DialogManager";
 
 export class Game {
 	static readonly WORLD_WIDTH = 5000;
@@ -12,14 +13,21 @@ export class Game {
 		left: ["ArrowLeft", "KeyA"],
 		right: ["ArrowRight", "KeyD"],
 	};
+	static readonly FONT_WEIGHT = "bold";
+	static readonly FONT_FAMILY = "Papyrus";
 
+	// ============ CANVAS & RENDERING ============
 	private _canvas: HTMLCanvasElement;
 	private _ctx: CanvasRenderingContext2D;
 	private _rootElement: HTMLElement;
-	private _tick: number = 0;
-	private _lastTime: number = 0;
 	private _width: number;
 	private _height: number;
+
+	// ============ TIMING ============
+	private _tick: number = 0;
+	private _lastTime: number = 0;
+
+	// ============ INPUT ============
 	private _keys: {
 		up: boolean;
 		down: boolean;
@@ -27,18 +35,20 @@ export class Game {
 		right: boolean;
 	};
 
-	// Images
+	// ============ IMAGES ============
 	private _skyImage: HTMLImageElement | null = null;
 	private _beeSprite: HTMLImageElement | null = null;
 	private _groundImage: HTMLImageElement | null = null;
+	private _textboxImage: HTMLImageElement | null = null;
 	private _npcImages: Map<string, HTMLImageElement> = new Map();
 	private _groundHeight: number = 62; // default value until ground image is loaded
 
-	// Actors
+	// ============ GAME WORLD (Actors) ============
 	private _bee: Bee;
 	private _npcs: NPC[] = [];
 
-	// Camera
+	// ============ SYSTEMS ============
+	private _dialogManager: DialogManager;
 	private _cameraX: number = 0;
 
 	constructor(rootElement: HTMLElement) {
@@ -67,28 +77,40 @@ export class Game {
 
 		// Create NPCs
 		this._npcs.push(
-			new NPC(1000, ["Hello World!"], "/sprites/npc1.png", 18, 0),
+			new NPC(
+				1000,
+				"Apiculteur Connecté",
+				["Hello World!"],
+				"/sprites/npc1.png",
+				18,
+				0,
+			),
 		);
 
 		// Create bee
 		this._bee = new Bee(100, this._height - Bee.SIZE - this._groundHeight);
 		this._keys = { up: false, down: false, left: false, right: false };
 
+		// Initialize dialog manager
+		this._dialogManager = new DialogManager();
+
 		// Load all images via Promise.all
 		(async (): Promise<void> => {
 			// Collect unique NPC image sources
 			const npcSrcs = [...new Set(this._npcs.map((npc) => npc.imageSrc))];
 
-			const [sky, bee, ground, ...npcImgs] = await Promise.all([
+			const [sky, bee, ground, textbox, ...npcImgs] = await Promise.all([
 				this.loadImage("/sprites/sky.png"),
 				this.loadImage("/sprites/bee.png"),
 				this.loadImage("/sprites/ground.png"),
+				this.loadImage("/sprites/textbox.png"),
 				...npcSrcs.map((src) => this.loadImage(src)),
 			]);
 
 			this._skyImage = sky;
 			this._beeSprite = bee;
 			this._groundImage = ground;
+			this._textboxImage = textbox;
 			this._groundHeight = ground.naturalHeight - 62;
 
 			npcSrcs.forEach((src, i) => this._npcImages.set(src, npcImgs[i]));
@@ -110,7 +132,12 @@ export class Game {
 			if (Game.KEY_CODES.up.includes(e.code)) this._keys.up = true;
 			if (Game.KEY_CODES.left.includes(e.code)) this._keys.left = true;
 			if (Game.KEY_CODES.right.includes(e.code)) this._keys.right = true;
-			e.preventDefault();
+
+			// Handle space bar for dialog interaction
+			if (e.code === "Space") {
+				e.preventDefault();
+				this._dialogManager.handleInteraction(this._npcs, this._bee);
+			}
 		});
 		window.addEventListener("keyup", (e) => {
 			if (Game.KEY_CODES.up.includes(e.code)) this._keys.up = false;
@@ -168,7 +195,7 @@ export class Game {
 		this._tick += dt;
 	}
 
-	draw() {
+	private draw() {
 		const ctx = this._ctx;
 
 		// Loading screen
@@ -285,5 +312,127 @@ export class Game {
 			);
 		}
 		ctx.restore();
+
+		// Draw textbox if dialog is active
+		if (this._dialogManager.activeDialogNPC && this._textboxImage) {
+			const textboxWidth = this._width * 0.75;
+			const aspectRatio =
+				this._textboxImage.naturalHeight / this._textboxImage.naturalWidth;
+			const textboxHeight = textboxWidth * aspectRatio; // Auto-scale height to maintain aspect ratio
+			const textboxX = (this._width - textboxWidth) / 2;
+			const textboxY = this._height - textboxHeight; // Bottom of screen
+
+			// Draw textbox background
+			ctx.drawImage(
+				this._textboxImage,
+				textboxX,
+				textboxY,
+				textboxWidth,
+				textboxHeight,
+			);
+
+			// Draw text (message[0])
+			const text = this._dialogManager.activeDialogNPC.message[0];
+			ctx.fillStyle = "black";
+			ctx.font = "16px Arial";
+			ctx.textBaseline = "top";
+
+			ctx.fillText(text, textboxX + 20, textboxY + 20); // Padding inside textbox
+		}
+
+		// DEBUG - DISPLAY TEXTBOX
+		if (this._npcs[0].message && this._textboxImage) {
+			const textboxWidth = this._width * 0.6;
+			const textboxHeight =
+				textboxWidth *
+				(this._textboxImage.naturalHeight / this._textboxImage.naturalWidth); // Auto-scale height to maintain aspect ratio
+			const textboxX = (this._width - textboxWidth) / 2;
+			const textboxY = this._height - textboxHeight;
+
+			// Draw textbox background
+			ctx.drawImage(
+				this._textboxImage,
+				textboxX,
+				textboxY,
+				textboxWidth,
+				textboxHeight,
+			);
+
+			// Draw NPC head (top portion of NPC image) on the left
+			const npcImage = this._npcImages.get(this._npcs[0].imageSrc);
+			if (npcImage) {
+				// Crop more of the NPC image vertically (head area)
+				const headHeight = npcImage.naturalHeight * 0.47; // Increase this value to show more (0.6, 0.7, 0.75, etc.)
+				
+				// Position head on left side of textbox
+				const headDisplayHeight = textboxHeight * 0.38;
+				const headDisplayWidth = (npcImage.naturalWidth / headHeight) * headDisplayHeight; // Maintain aspect ratio
+
+				ctx.drawImage(
+					npcImage,
+					0, // source x
+					0, // source y
+					npcImage.naturalWidth, // source width
+					headHeight, // source height
+					textboxX + (textboxWidth - headDisplayWidth) / 2 - 268, // destination x - centered
+					textboxY + textboxHeight - headDisplayHeight - 63, // destination y - anchored at bottom
+					headDisplayWidth, // destination width - maintain aspect ratio
+					headDisplayHeight, // destination height (stays same size)
+				);
+			}
+
+			// Draw text
+			ctx.fillStyle = "yellow";
+			ctx.font = `bold ${Math.round(
+				// Fit NPC name to available width
+				this.fitTextToWidth(
+					ctx,
+					this._npcs[0].name,
+					textboxWidth * 0.23,
+					Math.round((textboxWidth / 960) * 21),
+				),
+			)}px Papyrus`;
+			ctx.textBaseline = "middle";
+			ctx.textAlign = "center";
+			ctx.fillText(
+				this._npcs[0].name,
+				textboxX + textboxWidth * 0.396,
+				textboxY + textboxHeight * 0.259,
+			);
+
+			ctx.fillStyle = "black";
+			ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
+			ctx.textBaseline = "top";
+			ctx.textAlign = "left";
+			ctx.fillText(
+				this._npcs[0].message[0],
+				textboxX + textboxWidth * 0.29,
+				textboxY + textboxHeight * 0.4,
+			);
+		}
+	}
+
+	/**
+	 * Fits text to a max width by reducing font size if needed
+	 * Returns the final font size that fits
+	 */
+	private fitTextToWidth(
+		ctx: CanvasRenderingContext2D,
+		text: string,
+		maxWidth: number,
+		baseFontSize: number,
+	): number {
+		let fontSize = baseFontSize;
+		ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
+		let textWidth = ctx.measureText(text).width;
+
+		// Reduce font size until text fits with 10px margin on each side
+		while (textWidth > maxWidth - 20 && fontSize > 8) {
+			fontSize -= 0.5;
+			ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
+			textWidth = ctx.measureText(text).width;
+		}
+
+		return fontSize;
 	}
 }
