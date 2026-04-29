@@ -2,16 +2,6 @@ import { Bee } from "./Bee";
 import { NPC } from "./NPC";
 
 export class Game {
-	bee: Bee;
-	width: number;
-	height: number;
-	keys: {
-		up: boolean;
-		down: boolean;
-		left: boolean;
-		right: boolean;
-	};
-	// Constants
 	static readonly WORLD_WIDTH = 5000;
 	static readonly GAME_WIDTH = 1280;
 	static readonly GAME_HEIGHT = 720;
@@ -23,47 +13,58 @@ export class Game {
 		right: ["ArrowRight", "KeyD"],
 	};
 
-	private canvas: HTMLCanvasElement;
-	private ctx: CanvasRenderingContext2D;
-	private rootElement: HTMLElement;
+	private _canvas: HTMLCanvasElement;
+	private _ctx: CanvasRenderingContext2D;
+	private _rootElement: HTMLElement;
+	private _tick: number = 0;
+	private _lastTime: number = 0;
+	private _width: number;
+	private _height: number;
+	private _keys: {
+		up: boolean;
+		down: boolean;
+		left: boolean;
+		right: boolean;
+	};
 
 	// Images
-	private skyImage: HTMLImageElement | null = null;
-	private beeSprite: HTMLImageElement | null = null;
-	private groundImage: HTMLImageElement | null = null;
-	private npcImages: Map<string, HTMLImageElement> = new Map();
-	private groundHeight: number = 62; // valeur par défaut jusqu'au chargement
+	private _skyImage: HTMLImageElement | null = null;
+	private _beeSprite: HTMLImageElement | null = null;
+	private _groundImage: HTMLImageElement | null = null;
+	private _npcImages: Map<string, HTMLImageElement> = new Map();
+	private _groundHeight: number = 62; // default value until ground image is loaded
 
-	// NPCs
-	private npcs: NPC[] = [];
+	// Actors
+	private _bee: Bee;
+	private _npcs: NPC[] = [];
 
 	// Camera
-	private cameraX: number = 0;
+	private _cameraX: number = 0;
 
 	constructor(rootElement: HTMLElement) {
-		this.rootElement = rootElement;
+		this._rootElement = rootElement;
 
 		// Canvas setup
-		this.canvas = document.createElement("canvas");
-		this.canvas.width = Game.GAME_WIDTH;
-		this.canvas.height = Game.GAME_HEIGHT;
-		this.rootElement.appendChild(this.canvas);
+		this._canvas = document.createElement("canvas");
+		this._canvas.width = Game.GAME_WIDTH;
+		this._canvas.height = Game.GAME_HEIGHT;
+		this._rootElement.appendChild(this._canvas);
 
-		this.ctx = this.canvas.getContext("2d")!;
-		this.width = Game.GAME_WIDTH;
-		this.height = Game.GAME_HEIGHT;
+		this._ctx = this._canvas.getContext("2d")!;
+		this._width = Game.GAME_WIDTH;
+		this._height = Game.GAME_HEIGHT;
 
 		// Create NPCs
-		this.npcs.push(new NPC(1200, "Hello World!", "/sprites/npc1.png"));
+		this._npcs.push(new NPC(1000, ["Hello World!"], "/sprites/npc1.png"));
 
 		// Create bee
-		this.bee = new Bee(100, this.height - Bee.SIZE - this.groundHeight);
-		this.keys = { up: false, down: false, left: false, right: false };
+		this._bee = new Bee(100, this._height - Bee.SIZE - this._groundHeight);
+		this._keys = { up: false, down: false, left: false, right: false };
 
 		// Load all images via Promise.all
 		(async (): Promise<void> => {
 			// Collect unique NPC image sources
-			const npcSrcs = [...new Set(this.npcs.map((npc) => npc.imageSrc))];
+			const npcSrcs = [...new Set(this._npcs.map((npc) => npc.imageSrc))];
 
 			const [sky, bee, ground, ...npcImgs] = await Promise.all([
 				this.loadImage("/sprites/sky.png"),
@@ -72,12 +73,12 @@ export class Game {
 				...npcSrcs.map((src) => this.loadImage(src)),
 			]);
 
-			this.skyImage = sky;
-			this.beeSprite = bee;
-			this.groundImage = ground;
-			this.groundHeight = ground.naturalHeight - 62;
+			this._skyImage = sky;
+			this._beeSprite = bee;
+			this._groundImage = ground;
+			this._groundHeight = ground.naturalHeight - 62;
 
-			npcSrcs.forEach((src, i) => this.npcImages.set(src, npcImgs[i]));
+			npcSrcs.forEach((src, i) => this._npcImages.set(src, npcImgs[i]));
 		})();
 	}
 
@@ -93,102 +94,100 @@ export class Game {
 	start() {
 		// Setup event listeners
 		window.addEventListener("keydown", (e) => {
-			if (Game.KEY_CODES.up.includes(e.code)) this.keys.up = true;
-			if (Game.KEY_CODES.left.includes(e.code)) this.keys.left = true;
-			if (Game.KEY_CODES.right.includes(e.code)) this.keys.right = true;
+			if (Game.KEY_CODES.up.includes(e.code)) this._keys.up = true;
+			if (Game.KEY_CODES.left.includes(e.code)) this._keys.left = true;
+			if (Game.KEY_CODES.right.includes(e.code)) this._keys.right = true;
 			e.preventDefault();
 		});
 		window.addEventListener("keyup", (e) => {
-			if (Game.KEY_CODES.up.includes(e.code)) this.keys.up = false;
-			if (Game.KEY_CODES.left.includes(e.code)) this.keys.left = false;
-			if (Game.KEY_CODES.right.includes(e.code)) this.keys.right = false;
+			if (Game.KEY_CODES.up.includes(e.code)) this._keys.up = false;
+			if (Game.KEY_CODES.left.includes(e.code)) this._keys.left = false;
+			if (Game.KEY_CODES.right.includes(e.code)) this._keys.right = false;
 		});
 
 		// Setup animation
 		setInterval(() => {
-			if (this.keys.up || this.keys.left || this.keys.right) {
-				this.bee.frameIndex = (this.bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
+			if (this._keys.up || this._keys.left || this._keys.right) {
+				this._bee.frameIndex = (this._bee.frameIndex + 1) % Bee.TOTAL_FRAMES;
 			} else {
-				this.bee.frameIndex = 2; // sleeping frame
+				this._bee.frameIndex = 2; // sleeping frame
 			}
 		}, 25);
 
 		// Start game loop
-		const loop = () => {
-			this.update();
+		const loop = (timestamp: number) => {
+			const dt = this._lastTime ? (timestamp - this._lastTime) / (1000 / 60) : 1;
+			this._lastTime = timestamp;
+			this.update(dt);
 			this.draw();
 			requestAnimationFrame(loop);
 		};
-		loop();
+		requestAnimationFrame(loop);
 	}
 
-	update() {
-		this.bee.update(
-			this.keys,
-			Game.WORLD_WIDTH,
-			this.height,
-			this.groundHeight,
-		);
-		this.npcs.forEach((npc) => {
-			const npcImage = this.npcImages.get(npc.imageSrc);
+	update(dt: number = 1) {
+    this._bee.update(this._keys, Game.WORLD_WIDTH, this._height, this._groundHeight, dt);
+		this._npcs.forEach((npc) => {
+			const npcImage = this._npcImages.get(npc.imageSrc);
 			if (npcImage) {
 				npc.y =
-					this.height -
+					this._height -
 					npcImage.naturalHeight * npc.scale -
-					this.groundHeight -
+					this._groundHeight -
 					npc.randomYOffset;
 			}
 			npc.update();
 		});
 
 		// Camera follows the bee horizontally
-		this.cameraX +=
-			(this.bee.x - this.width / 2 + Bee.SIZE / 2 - this.cameraX) * 0.1;
-		if (this.cameraX < 0) this.cameraX = 0;
+		this._cameraX += (this._bee.x - this._width / 2 + Bee.SIZE / 2 - this._cameraX) * 0.1 * dt;
+		if (this._cameraX < 0) this._cameraX = 0;
+
+		this._tick += dt;
 	}
 
 	draw() {
-		const ctx = this.ctx;
+		const ctx = this._ctx;
 
 		// Loading screen
-		if (!(this.skyImage && this.beeSprite && this.groundImage)) {
+		if (!(this._skyImage && this._beeSprite && this._groundImage)) {
 			ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-			ctx.fillRect(0, 0, this.width, this.height);
+			ctx.fillRect(0, 0, this._width, this._height);
 			ctx.fillStyle = "black";
 			ctx.font = "20px sans-serif";
-			ctx.fillText("Loading...", this.width / 2 - 50, this.height / 2);
+			ctx.fillText("Loading...", this._width / 2 - 50, this._height / 2);
 			return;
 		}
 
 		// Background
 		ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-		ctx.fillRect(0, 0, this.width, this.height);
+		ctx.fillRect(0, 0, this._width, this._height);
 
 		// Sky with parallax effect
-		const skyW = this.skyImage.naturalWidth * Game.SKY_SCALE;
-		for (let x = -(this.cameraX * 0.05) % skyW; x < this.width; x += skyW) {
+		const skyW = this._skyImage.naturalWidth * Game.SKY_SCALE;
+		for (let x = -(this._cameraX * 0.05) % skyW; x < this._width; x += skyW) {
 			ctx.drawImage(
-				this.skyImage,
+				this._skyImage,
 				x,
 				0,
 				skyW,
-				this.skyImage.naturalHeight * Game.SKY_SCALE,
+				this._skyImage.naturalHeight * Game.SKY_SCALE,
 			);
 		}
 
 		// Ground
-		const groundW = this.groundImage.naturalWidth;
-		for (let x = -(this.cameraX % groundW); x < this.width; x += groundW - 1) {
+		const groundW = this._groundImage.naturalWidth;
+		for (let x = -(this._cameraX % groundW); x < this._width; x += groundW - 1) {
 			ctx.drawImage(
-				this.groundImage,
+				this._groundImage,
 				x,
-				this.height - this.groundImage.naturalHeight,
+				this._height - this._groundImage.naturalHeight,
 			);
 		}
 
 		// NPCs
-		this.npcs.forEach((npc) => {
-			const npcImage = this.npcImages.get(npc.imageSrc);
+		this._npcs.forEach((npc) => {
+			const npcImage = this._npcImages.get(npc.imageSrc);
 			if (!npcImage) return;
 
 			ctx.drawImage(
@@ -197,25 +196,42 @@ export class Game {
 				0,
 				npcImage.naturalWidth,
 				npcImage.naturalHeight,
-				npc.x - this.cameraX,
+				npc.x - this._cameraX,
 				npc.y,
 				npcImage.naturalWidth * npc.scale,
 				npcImage.naturalHeight * npc.scale,
 			);
+
+			if (!npc.isNearBee(this._bee)) return;
+
+			const indicatorX =
+				npc.x - this._cameraX + (npcImage.naturalWidth * npc.scale) / 2;
+			const indicatorY = npc.y - 20 + Math.sin(this._tick * 0.1) * 4; // up and down movement
+
+			// Draw little triangle indicator above NPC
+			ctx.save();
+			ctx.fillStyle = "orange";
+			ctx.beginPath();
+			ctx.moveTo(indicatorX, indicatorY + 12);
+			ctx.lineTo(indicatorX - 8, indicatorY);
+			ctx.lineTo(indicatorX + 8, indicatorY);
+			ctx.closePath();
+			ctx.fill();
+			ctx.restore();
 		});
 
 		// Bee
-		const screenX = this.bee.x - this.cameraX;
-		const screenY = this.bee.y;
-		const col = this.bee.frameIndex % Bee.SPRITE_COLS;
-		const row = Math.floor(this.bee.frameIndex / Bee.SPRITE_COLS);
+		const screenX = this._bee.x - this._cameraX;
+		const screenY = this._bee.y;
+		const col = this._bee.frameIndex % Bee.SPRITE_COLS;
+		const row = Math.floor(this._bee.frameIndex / Bee.SPRITE_COLS);
 
 		ctx.save();
-		if (this.bee.direction === -1) {
+		if (this._bee.direction === -1) {
 			ctx.translate(screenX + Bee.SIZE, screenY);
 			ctx.scale(-1, 1);
 			ctx.drawImage(
-				this.beeSprite,
+				this._beeSprite,
 				col * Bee.FRAME_W,
 				row * Bee.FRAME_H,
 				Bee.FRAME_W,
@@ -227,7 +243,7 @@ export class Game {
 			);
 		} else {
 			ctx.drawImage(
-				this.beeSprite,
+				this._beeSprite,
 				col * Bee.FRAME_W,
 				row * Bee.FRAME_H,
 				Bee.FRAME_W,
