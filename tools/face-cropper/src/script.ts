@@ -50,9 +50,6 @@ class FaceCropper {
 		document.getElementById("saveBtn")!.addEventListener("click", () => {
 			this.saveCrop();
 		});
-		document.getElementById("resetBtn")!.addEventListener("click", () => {
-			this.resetCropPosition();
-		});
 		document.getElementById("newImageBtn")!.addEventListener("click", () => {
 			imageInput.click();
 		});
@@ -128,21 +125,6 @@ class FaceCropper {
 		this.previewCanvas.width = 200;
 		this.previewCanvas.height = 200;
 
-		this.resetCropPosition();
-		this.redraw();
-	}
-
-	private resetCropPosition(): void {
-		if (!this.image) return;
-
-		// Calculate center position in ORIGINAL image coordinates
-		this.cropPos = {
-			x: (this.image.width - this.cropSize) / 2,
-			y: (this.image.height - this.cropSize) / 2,
-		};
-
-		// Constrain to bounds
-		this.constrainCropBox();
 		this.redraw();
 	}
 

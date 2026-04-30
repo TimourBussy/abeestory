@@ -174,8 +174,8 @@ export class Game {
     // Start game loop
     const loop = (timestamp: number) => {
       const dt = this._lastTime
-        ? Math.min((timestamp - this._lastTime) / (1000 / 60), 3) // prevent bee teleportation if it's lagging
-        : 1;
+        ? Math.min((timestamp - this._lastTime) / 1000, 0.05) // dt en secondes, max 50ms
+        : 0.016;
       this._lastTime = timestamp;
       this.update(dt);
       this.draw();
@@ -206,10 +206,11 @@ export class Game {
 
     // Camera follows the bee horizontally
     this._cameraX +=
-      (this._bee.x - this._width / 2 + Bee.SIZE / 2 - this._cameraX) * 0.1 * dt;
+      (this._bee.x - this._width / 2 + Bee.SIZE / 2 - this._cameraX) *
+      (1 - Math.pow(0.01, dt));
     if (this._cameraX < 0) this._cameraX = 0;
 
-    this._tick += dt;
+    this._tick += dt * 60;
   }
 
   private draw() {
