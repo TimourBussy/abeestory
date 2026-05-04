@@ -81,7 +81,13 @@ export class Game {
       new NPC(
         1000,
         "Apiculteur Connecté",
-        ["Hello World!"],
+        [
+          "Salut petite abeille ! Moi, je surveille les ruches grâce à des capteurs connectés.",
+          "Ils me donnent des infos comme la température, l’humidité… et même l’activité des abeilles !",
+          "Grâce à ça, je peux m’assurer que la ruche est en bonne santé sans la déranger.",
+          "Mais une ruche en bonne santé a besoin de nectar… et ça, c’est ton boulot !",
+          "Va me chercher du nectar en pollinisant une fleur, puis reviens me voir !",
+        ],
         "/sprites/npc1.png",
         18,
         0,
@@ -214,26 +220,24 @@ export class Game {
   }
 
   private draw() {
-    const ctx = this._ctx;
-
     // Loading screen
     if (!(this._skyImage && this._beeSprite && this._groundImage)) {
-      ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-      ctx.fillRect(0, 0, this._width, this._height);
-      ctx.fillStyle = "black";
-      ctx.font = "20px sans-serif";
-      ctx.fillText("Loading...", this._width / 2 - 50, this._height / 2);
+      this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
+      this._ctx.fillRect(0, 0, this._width, this._height);
+      this._ctx.fillStyle = "black";
+      this._ctx.font = "20px sans-serif";
+      this._ctx.fillText("Loading...", this._width / 2 - 50, this._height / 2);
       return;
     }
 
     // Background
-    ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-    ctx.fillRect(0, 0, this._width, this._height);
+    this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
+    this._ctx.fillRect(0, 0, this._width, this._height);
 
     // Sky with parallax effect
     const skyW = this._skyImage.naturalWidth * Game.SKY_SCALE;
     for (let x = -(this._cameraX * 0.05) % skyW; x < this._width; x += skyW) {
-      ctx.drawImage(
+      this._ctx.drawImage(
         this._skyImage,
         x,
         0,
@@ -249,7 +253,7 @@ export class Game {
       x < this._width;
       x += groundW - 1
     ) {
-      ctx.drawImage(
+      this._ctx.drawImage(
         this._groundImage,
         x,
         this._height - this._groundImage.naturalHeight,
@@ -261,7 +265,7 @@ export class Game {
       const npcImage = this._npcImages.get(npc.imageSrc);
       if (!npcImage) return;
 
-      ctx.drawImage(
+      this._ctx.drawImage(
         npcImage,
         0,
         0,
@@ -284,15 +288,15 @@ export class Game {
         npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
 
       // Draw little triangle indicator above NPC
-      ctx.save();
-      ctx.fillStyle = "orange";
-      ctx.beginPath();
-      ctx.moveTo(indicatorX, indicatorY + 12);
-      ctx.lineTo(indicatorX - 8, indicatorY);
-      ctx.lineTo(indicatorX + 8, indicatorY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      this._ctx.save();
+      this._ctx.fillStyle = "orange";
+      this._ctx.beginPath();
+      this._ctx.moveTo(indicatorX, indicatorY + 12);
+      this._ctx.lineTo(indicatorX - 8, indicatorY);
+      this._ctx.lineTo(indicatorX + 8, indicatorY);
+      this._ctx.closePath();
+      this._ctx.fill();
+      this._ctx.restore();
     });
 
     // Bee
@@ -301,11 +305,11 @@ export class Game {
     const col = this._bee.frameIndex % Bee.SPRITE_COLS;
     const row = Math.floor(this._bee.frameIndex / Bee.SPRITE_COLS);
 
-    ctx.save();
+    this._ctx.save();
     if (this._bee.direction === -1) {
-      ctx.translate(screenX + Bee.SIZE, screenY);
-      ctx.scale(-1, 1);
-      ctx.drawImage(
+      this._ctx.translate(screenX + Bee.SIZE, screenY);
+      this._ctx.scale(-1, 1);
+      this._ctx.drawImage(
         this._beeSprite,
         col * Bee.FRAME_W,
         row * Bee.FRAME_H,
@@ -317,7 +321,7 @@ export class Game {
         Bee.SIZE,
       );
     } else {
-      ctx.drawImage(
+      this._ctx.drawImage(
         this._beeSprite,
         col * Bee.FRAME_W,
         row * Bee.FRAME_H,
@@ -329,7 +333,7 @@ export class Game {
         Bee.SIZE,
       );
     }
-    ctx.restore();
+    this._ctx.restore();
 
     // Draw textbox if dialog is active
     if (this._dialogManager.activeDialogNPC && this._textboxImage) {
@@ -341,7 +345,7 @@ export class Game {
       const textboxY = this._height - textboxHeight;
 
       // Draw textbox background
-      ctx.drawImage(
+      this._ctx.drawImage(
         this._textboxImage,
         textboxX,
         textboxY,
@@ -359,48 +363,50 @@ export class Game {
         const faceW = faceSize * 0.951; // reduce width to fit better in the face frame
         const faceH = faceSize;
 
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
-        ctx.clip();
+        this._ctx.save();
+        this._ctx.beginPath();
+        this._ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
+        this._ctx.clip();
 
         // DEBUG: Background to visualize positioning
         // ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
         // ctx.fillRect(faceX, faceY, faceW, faceH);
 
-        ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
+        this._ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
 
-        ctx.restore();
+        this._ctx.restore();
       }
 
       // Draw text
-      ctx.fillStyle = "yellow";
-      ctx.font = `bold ${Math.round(
+      this._ctx.fillStyle = "yellow";
+      this._ctx.font = `bold ${Math.round(
         // Fit NPC name to available width
-        this.fitTextToWidth(
-          ctx,
+        this.fitNameToWidth(
           this._npcs[0].name,
           textboxWidth * 0.23,
           Math.round((textboxWidth / 960) * 21),
         ),
       )}px Papyrus`;
-      ctx.textBaseline = "middle";
-      ctx.textAlign = "center";
-      ctx.fillText(
+      this._ctx.textBaseline = "middle";
+      this._ctx.textAlign = "center";
+      this._ctx.fillText(
         this._npcs[0].name,
         textboxX + textboxWidth * 0.396,
         textboxY + textboxHeight * 0.259,
       );
 
-      ctx.fillStyle = "black";
-      ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
-      ctx.textBaseline = "top";
-      ctx.textAlign = "left";
-      ctx.fillText(
-        this._npcs[0].message[0],
-        textboxX + textboxWidth * 0.29,
-        textboxY + textboxHeight * 0.4,
-      );
+      this._ctx.fillStyle = "black";
+      this._ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
+      this._ctx.textBaseline = "top";
+      this._ctx.textAlign = "left";
+
+      this.wrapDialog(this._npcs[0].message[0], textboxWidth * 0.65).forEach((line, index) => { // wrap dialog to max text width
+        this._ctx.fillText(
+          line,
+          textboxX + textboxWidth * 0.29,
+          textboxY + textboxHeight * 0.4 + index * 30, // * lineHeight
+        );
+      });
     }
 
     // DEBUG - DISPLAY TEXTBOX
@@ -413,7 +419,7 @@ export class Game {
     // 	const textboxY = this._height - textboxHeight;
 
     // 	// Draw textbox background
-    // 	ctx.drawImage(
+    // 	this._ctx.drawImage(
     // 		this._textboxImage,
     // 		textboxX,
     // 		textboxY,
@@ -431,44 +437,43 @@ export class Game {
     // 		const faceW = faceSize * 0.951; // reduce width to fit better in the face frame
     // 		const faceH = faceSize;
 
-    // 		ctx.save();
-    // 		ctx.beginPath();
-    // 		ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
-    // 		ctx.clip();
+    // 		this._ctx.save();
+    // 		this._ctx.beginPath();
+    // 		this._ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
+    // 		this._ctx.clip();
 
     // 		// DEBUG: Background to visualize positioning
-    // 		// ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-    // 		// ctx.fillRect(faceX, faceY, faceW, faceH);
+    // 		// this._ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+    // 		// this._ctx.fillRect(faceX, faceY, faceW, faceH);
 
-    // 		ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
+    // 		this._ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
 
-    // 		ctx.restore();
+    // 		this._ctx.restore();
     // 	}
 
     // 	// Draw text
-    // 	ctx.fillStyle = "yellow";
-    // 	ctx.font = `bold ${Math.round(
+    // 	this._ctx.fillStyle = "yellow";
+    // 	this._ctx.font = `bold ${Math.round(
     // 		// Fit NPC name to available width
-    // 		this.fitTextToWidth(
-    // 			ctx,
+    // 		this.fitNameToWidth(
     // 			this._npcs[0].name,
     // 			textboxWidth * 0.23,
     // 			Math.round((textboxWidth / 960) * 21),
     // 		),
     // 	)}px Papyrus`;
-    // 	ctx.textBaseline = "middle";
-    // 	ctx.textAlign = "center";
-    // 	ctx.fillText(
+    // 	this._ctx.textBaseline = "middle";
+    // 	this._ctx.textAlign = "center";
+    // 	this._ctx.fillText(
     // 		this._npcs[0].name,
     // 		textboxX + textboxWidth * 0.396,
     // 		textboxY + textboxHeight * 0.259,
     // 	);
 
-    // 	ctx.fillStyle = "black";
-    // 	ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
-    // 	ctx.textBaseline = "top";
-    // 	ctx.textAlign = "left";
-    // 	ctx.fillText(
+    // 	this._ctx.fillStyle = "black";
+    // 	this._ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
+    // 	this._ctx.textBaseline = "top";
+    // 	this._ctx.textAlign = "left";
+    // 	this._ctx.fillText(
     // 		this._npcs[0].message[0],
     // 		textboxX + textboxWidth * 0.29,
     // 		textboxY + textboxHeight * 0.4,
@@ -480,23 +485,46 @@ export class Game {
    * Fits text to a max width by reducing font size if needed
    * Returns the final font size that fits
    */
-  private fitTextToWidth(
-    ctx: CanvasRenderingContext2D,
+  private fitNameToWidth(
     text: string,
     maxWidth: number,
     baseFontSize: number,
   ): number {
     let fontSize = baseFontSize;
-    ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
-    let textWidth = ctx.measureText(text).width;
+    this._ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
+    let textWidth = this._ctx.measureText(text).width;
 
     // Reduce font size until text fits with 10px margin on each side
     while (textWidth > maxWidth - 20 && fontSize > 8) {
       fontSize -= 0.5;
-      ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
-      textWidth = ctx.measureText(text).width;
+      this._ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
+      textWidth = this._ctx.measureText(text).width;
     }
 
     return fontSize;
+  }
+
+  private wrapDialog(text: string, maxWidth: number): string[] {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let currentLine = "";
+
+    words.forEach((word) => {
+      const testLine = currentLine + (currentLine ? " " : "") + word;
+      const metrics = this._ctx.measureText(testLine);
+
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines;
   }
 }
