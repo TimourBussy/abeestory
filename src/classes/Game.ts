@@ -167,6 +167,12 @@ export class Game {
 			if (Game.KEY_CODES.right.includes(e.code)) this._keys.right = false;
 		});
 
+		// Handle mouse click for dialog progression
+		window.addEventListener("click", () => {
+			if (this._dialogManager.activeDialogNPC)
+				this._dialogManager.progressDialog();
+		});
+
 		// Setup animation
 		setInterval(() => {
 			if (this._bee.isFrozen) {
@@ -181,357 +187,298 @@ export class Game {
 		// Start game loop
 		const loop = (timestamp: number) => {
 			const dt = this._lastTime
-				? Math.min((timestamp - this._lastTime) / 1000, 0.05) // dt en secondes, max 50ms
+				? Math.min((timestamp - this._lastTime) / 1000, 0.05)
 				: 0.016;
 			this._lastTime = timestamp;
-			this.update(dt);
-			this.draw();
+
+			///////////////////////// UPDATE /////////////////////////
+			if (!this._bee.isFrozen)
+				this._bee.update(
+					this._keys,
+					Game.WORLD_WIDTH,
+					this._height,
+					this._groundHeight,
+					dt,
+				);
+
+			for (const npc of this._npcs) {
+				const npcImage = this._npcImages.get(npc.imageSrc);
+				if (npcImage) {
+					npc.y =
+						this._height -
+						npcImage.naturalHeight * npc.scale -
+						this._groundHeight -
+						npc.randomYOffset;
+				}
+				npc.update();
+			}
+
+			// Camera follows the bee horizontally
+			this._cameraX +=
+				(this._bee.x - this._width / 2 + Bee.SIZE / 2 - this._cameraX) *
+				(1 - Math.pow(0.01, dt));
+			if (this._cameraX < 0) this._cameraX = 0;
+
+			this._tick += dt * 60;
+
+			///////////////////////// DRAW /////////////////////////
+			// Loading screen
+			if (!(this._skyImage && this._beeSprite && this._groundImage)) {
+				this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
+				this._ctx.fillRect(0, 0, this._width, this._height);
+				this._ctx.fillStyle = "black";
+				this._ctx.font = "20px sans-serif";
+				this._ctx.fillText(
+					"Loading...",
+					this._width / 2 - 50,
+					this._height / 2,
+				);
+				return;
+			}
+
+			// Background
+			this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
+			this._ctx.fillRect(0, 0, this._width, this._height);
+
+			// Sky with parallax effect
+			const skyW = this._skyImage.naturalWidth * Game.SKY_SCALE;
+			for (let x = -(this._cameraX * 0.05) % skyW; x < this._width; x += skyW) {
+				this._ctx.drawImage(
+					this._skyImage,
+					x,
+					0,
+					skyW,
+					this._skyImage.naturalHeight * Game.SKY_SCALE,
+				);
+			}
+
+			// Ground
+			const groundW = this._groundImage.naturalWidth;
+			for (
+				let x = -(this._cameraX % groundW);
+				x < this._width;
+				x += groundW - 1
+			) {
+				this._ctx.drawImage(
+					this._groundImage,
+					x,
+					this._height - this._groundImage.naturalHeight,
+				);
+			}
+
+			// NPCs
+			for (const npc of this._npcs) {
+				const npcImage = this._npcImages.get(npc.imageSrc);
+				if (!npcImage) continue;
+
+				this._ctx.drawImage(
+					npcImage,
+					0,
+					0,
+					npcImage.naturalWidth,
+					npcImage.naturalHeight,
+					npc.x - this._cameraX,
+					npc.y,
+					npcImage.naturalWidth * npc.scale,
+					npcImage.naturalHeight * npc.scale,
+				);
+
+				if (!npc.isNearBee(this._bee)) continue;
+
+				const indicatorX =
+					npc.x -
+					this._cameraX +
+					(npcImage.naturalWidth * npc.scale) / 2 +
+					npc.triangleOffsetX;
+				const indicatorY =
+					npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
+
+				// Draw little triangle indicator above NPC (pointing up)
+				this.drawTriangle(indicatorX, indicatorY, "up");
+			}
+
+			// Bee
+			const screenX = this._bee.x - this._cameraX;
+			const screenY = this._bee.y;
+			const col = this._bee.frameIndex % Bee.SPRITE_COLS;
+			const row = Math.floor(this._bee.frameIndex / Bee.SPRITE_COLS);
+
+			this._ctx.save();
+			if (this._bee.direction === -1) {
+				this._ctx.translate(screenX + Bee.SIZE, screenY);
+				this._ctx.scale(-1, 1);
+				this._ctx.drawImage(
+					this._beeSprite,
+					col * Bee.FRAME_W,
+					row * Bee.FRAME_H,
+					Bee.FRAME_W,
+					Bee.FRAME_H,
+					0,
+					0,
+					Bee.SIZE,
+					Bee.SIZE,
+				);
+			} else
+				this._ctx.drawImage(
+					this._beeSprite,
+					col * Bee.FRAME_W,
+					row * Bee.FRAME_H,
+					Bee.FRAME_W,
+					Bee.FRAME_H,
+					screenX,
+					screenY,
+					Bee.SIZE,
+					Bee.SIZE,
+				);
+			this._ctx.restore();
+
+			// Draw textbox if dialog is active
+			if (this._dialogManager.activeDialogNPC && this._textboxImage) {
+				this._bee.isFrozen = true; // Freeze bee movement during dialog
+				const textboxWidth = this._width * 0.6;
+				const textboxHeight =
+					textboxWidth *
+					(this._textboxImage.naturalHeight / this._textboxImage.naturalWidth); // Auto-scale height to maintain aspect ratio
+				const textboxX = (this._width - textboxWidth) / 2;
+				const textboxY = this._height - textboxHeight;
+
+				// Draw textbox background
+				this._ctx.drawImage(
+					this._textboxImage,
+					textboxX,
+					textboxY,
+					textboxWidth,
+					textboxHeight,
+				);
+
+				// Draw NPC head (face image if available)
+				const npcFaceImage = this._npcFaceImages.get(this._npcs[0].imageSrc);
+				if (npcFaceImage) {
+					// Simple square image - just position and draw
+					const faceSize = textboxHeight * 0.53; // 80% of textbox height
+					const faceX = textboxX + textboxWidth * 0.081;
+					const faceY = textboxY + textboxHeight * 0.227;
+					const faceW = faceSize * 0.951; // reduce width to fit better in the face frame
+					const faceH = faceSize;
+
+					this._ctx.save();
+					this._ctx.beginPath();
+					this._ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
+					this._ctx.clip();
+
+					// DEBUG: Background to visualize positioning
+					// ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+					// ctx.fillRect(faceX, faceY, faceW, faceH);
+
+					this._ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
+
+					this._ctx.restore();
+				}
+
+				// Draw text
+				this._ctx.fillStyle = "yellow";
+				this._ctx.font = `bold ${Math.round(
+					// Fit NPC name to available width
+					((text: string, maxWidth: number, baseFontSize: number): number => {
+						let fontSize = baseFontSize;
+						this._ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
+						let textWidth = this._ctx.measureText(text).width;
+
+						// Reduce font size until text fits with 10px margin on each side
+						while (textWidth > maxWidth - 20 && fontSize > 8) {
+							fontSize -= 0.5;
+							this._ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
+							textWidth = this._ctx.measureText(text).width;
+						}
+
+						return fontSize;
+					})(
+						this._npcs[0].name,
+						textboxWidth * 0.23,
+						Math.round((textboxWidth / 960) * 21),
+					),
+				)}px Papyrus`;
+				this._ctx.textBaseline = "middle";
+				this._ctx.textAlign = "center";
+				this._ctx.fillText(
+					this._npcs[0].name,
+					textboxX + textboxWidth * 0.396,
+					textboxY + textboxHeight * 0.259,
+				);
+
+				this._ctx.fillStyle = "black";
+				this._ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
+				this._ctx.textBaseline = "top";
+				this._ctx.textAlign = "left";
+
+				const dialogLines = ((text: string, maxWidth: number): string[] => {
+					const words = text.split(" ");
+					const lines: string[] = [];
+					let currentLine = "";
+
+					for (const word of words) {
+						const testLine = currentLine + (currentLine ? " " : "") + word;
+						const metrics = this._ctx.measureText(testLine);
+
+						if (metrics.width > maxWidth && currentLine) {
+							lines.push(currentLine);
+							currentLine = word;
+						} else {
+							currentLine = testLine;
+						}
+					}
+
+					if (currentLine) {
+						lines.push(currentLine);
+					}
+
+					return lines;
+				})(
+					this._npcs[0].message[this._dialogManager.messageIndex],
+					textboxWidth * 0.65,
+				);
+				for (const [index, line] of dialogLines.entries())
+					// wrap dialog to max text width
+					this._ctx.fillText(
+						line,
+						textboxX + textboxWidth * 0.29,
+						textboxY + textboxHeight * 0.4 + index * 30, // * lineHeight
+					);
+
+				// Draw triangle indicator (pointing down)
+				this.drawTriangle(
+					textboxX + textboxWidth - 30,
+					textboxY + textboxHeight - 25,
+					"down",
+				);
+			} else {
+				this._bee.isFrozen = false; // Unfreeze bee when dialog closes
+			}
+
 			requestAnimationFrame(loop);
 		};
 		requestAnimationFrame(loop);
 	}
 
-	update(dt: number = 1) {
-		if (!this._bee.isFrozen)
-			this._bee.update(
-				this._keys,
-				Game.WORLD_WIDTH,
-				this._height,
-				this._groundHeight,
-				dt,
-			);
-
-		for (const npc of this._npcs) {
-			const npcImage = this._npcImages.get(npc.imageSrc);
-			if (npcImage) {
-				npc.y =
-					this._height -
-					npcImage.naturalHeight * npc.scale -
-					this._groundHeight -
-					npc.randomYOffset;
-			}
-			npc.update();
-		}
-
-		// Camera follows the bee horizontally
-		this._cameraX +=
-			(this._bee.x - this._width / 2 + Bee.SIZE / 2 - this._cameraX) *
-			(1 - Math.pow(0.01, dt));
-		if (this._cameraX < 0) this._cameraX = 0;
-
-		this._tick += dt * 60;
-	}
-
-	private draw() {
-		// Loading screen
-		if (!(this._skyImage && this._beeSprite && this._groundImage)) {
-			this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-			this._ctx.fillRect(0, 0, this._width, this._height);
-			this._ctx.fillStyle = "black";
-			this._ctx.font = "20px sans-serif";
-			this._ctx.fillText("Loading...", this._width / 2 - 50, this._height / 2);
-			return;
-		}
-
-		// Background
-		this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
-		this._ctx.fillRect(0, 0, this._width, this._height);
-
-		// Sky with parallax effect
-		const skyW = this._skyImage.naturalWidth * Game.SKY_SCALE;
-		for (let x = -(this._cameraX * 0.05) % skyW; x < this._width; x += skyW) {
-			this._ctx.drawImage(
-				this._skyImage,
-				x,
-				0,
-				skyW,
-				this._skyImage.naturalHeight * Game.SKY_SCALE,
-			);
-		}
-
-		// Ground
-		const groundW = this._groundImage.naturalWidth;
-		for (
-			let x = -(this._cameraX % groundW);
-			x < this._width;
-			x += groundW - 1
-		) {
-			this._ctx.drawImage(
-				this._groundImage,
-				x,
-				this._height - this._groundImage.naturalHeight,
-			);
-		}
-
-		// NPCs
-		for (const npc of this._npcs) {
-			const npcImage = this._npcImages.get(npc.imageSrc);
-			if (!npcImage) continue;
-
-			this._ctx.drawImage(
-				npcImage,
-				0,
-				0,
-				npcImage.naturalWidth,
-				npcImage.naturalHeight,
-				npc.x - this._cameraX,
-				npc.y,
-				npcImage.naturalWidth * npc.scale,
-				npcImage.naturalHeight * npc.scale,
-			);
-
-			if (!npc.isNearBee(this._bee)) continue;
-
-			const indicatorX =
-				npc.x -
-				this._cameraX +
-				(npcImage.naturalWidth * npc.scale) / 2 +
-				npc.triangleOffsetX;
-			const indicatorY =
-				npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
-
-			// Draw little triangle indicator above NPC
-			this._ctx.save();
-			this._ctx.fillStyle = "orange";
-			this._ctx.beginPath();
-			this._ctx.moveTo(indicatorX, indicatorY + 12);
-			this._ctx.lineTo(indicatorX - 8, indicatorY);
-			this._ctx.lineTo(indicatorX + 8, indicatorY);
-			this._ctx.closePath();
-			this._ctx.fill();
-			this._ctx.restore();
-		}
-
-		// Bee
-		const screenX = this._bee.x - this._cameraX;
-		const screenY = this._bee.y;
-		const col = this._bee.frameIndex % Bee.SPRITE_COLS;
-		const row = Math.floor(this._bee.frameIndex / Bee.SPRITE_COLS);
-
+	private drawTriangle(x: number, y: number, direction: "up" | "down"): void {
 		this._ctx.save();
-		if (this._bee.direction === -1) {
-			this._ctx.translate(screenX + Bee.SIZE, screenY);
-			this._ctx.scale(-1, 1);
-			this._ctx.drawImage(
-				this._beeSprite,
-				col * Bee.FRAME_W,
-				row * Bee.FRAME_H,
-				Bee.FRAME_W,
-				Bee.FRAME_H,
-				0,
-				0,
-				Bee.SIZE,
-				Bee.SIZE,
-			);
-		} else
-			this._ctx.drawImage(
-				this._beeSprite,
-				col * Bee.FRAME_W,
-				row * Bee.FRAME_H,
-				Bee.FRAME_W,
-				Bee.FRAME_H,
-				screenX,
-				screenY,
-				Bee.SIZE,
-				Bee.SIZE,
-			);
+		this._ctx.fillStyle = "orange";
+		this._ctx.beginPath();
+
+		if (direction === "up") {
+			// Points upward
+			this._ctx.moveTo(x, y + 12);
+			this._ctx.lineTo(x - 8, y);
+			this._ctx.lineTo(x + 8, y);
+		} else {
+			// Points downward
+			this._ctx.moveTo(x, y - 12);
+			this._ctx.lineTo(x - 8, y);
+			this._ctx.lineTo(x + 8, y);
+		}
+
+		this._ctx.closePath();
+		this._ctx.fill();
 		this._ctx.restore();
-
-		// Draw textbox if dialog is active
-		if (this._dialogManager.activeDialogNPC && this._textboxImage) {
-			this._bee.isFrozen = true; // Freeze bee movement during dialog
-			const textboxWidth = this._width * 0.6;
-			const textboxHeight =
-				textboxWidth *
-				(this._textboxImage.naturalHeight / this._textboxImage.naturalWidth); // Auto-scale height to maintain aspect ratio
-			const textboxX = (this._width - textboxWidth) / 2;
-			const textboxY = this._height - textboxHeight;
-
-			// Draw textbox background
-			this._ctx.drawImage(
-				this._textboxImage,
-				textboxX,
-				textboxY,
-				textboxWidth,
-				textboxHeight,
-			);
-
-			// Draw NPC head (face image if available)
-			const npcFaceImage = this._npcFaceImages.get(this._npcs[0].imageSrc);
-			if (npcFaceImage) {
-				// Simple square image - just position and draw
-				const faceSize = textboxHeight * 0.53; // 80% of textbox height
-				const faceX = textboxX + textboxWidth * 0.081;
-				const faceY = textboxY + textboxHeight * 0.227;
-				const faceW = faceSize * 0.951; // reduce width to fit better in the face frame
-				const faceH = faceSize;
-
-				this._ctx.save();
-				this._ctx.beginPath();
-				this._ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
-				this._ctx.clip();
-
-				// DEBUG: Background to visualize positioning
-				// ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-				// ctx.fillRect(faceX, faceY, faceW, faceH);
-
-				this._ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
-
-				this._ctx.restore();
-			}
-
-			// Draw text
-			this._ctx.fillStyle = "yellow";
-			this._ctx.font = `bold ${Math.round(
-				// Fit NPC name to available width
-				this.fitNameToWidth(
-					this._npcs[0].name,
-					textboxWidth * 0.23,
-					Math.round((textboxWidth / 960) * 21),
-				),
-			)}px Papyrus`;
-			this._ctx.textBaseline = "middle";
-			this._ctx.textAlign = "center";
-			this._ctx.fillText(
-				this._npcs[0].name,
-				textboxX + textboxWidth * 0.396,
-				textboxY + textboxHeight * 0.259,
-			);
-
-			this._ctx.fillStyle = "black";
-			this._ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
-			this._ctx.textBaseline = "top";
-			this._ctx.textAlign = "left";
-
-			const dialogLines = this.wrapDialog(
-				this._npcs[0].message[0],
-				textboxWidth * 0.65,
-			);
-			for (const [index, line] of dialogLines.entries())
-				// wrap dialog to max text width
-				this._ctx.fillText(
-					line,
-					textboxX + textboxWidth * 0.29,
-					textboxY + textboxHeight * 0.4 + index * 30, // * lineHeight
-				);
-		} else this._bee.isFrozen = false; // Unfreeze bee when dialog closes
-
-		// DEBUG - DISPLAY TEXTBOX
-		// if (this._npcs[0].message && this._textboxImage) {
-		// 	const textboxWidth = this._width * 0.6;
-		// 	const textboxHeight =
-		// 		textboxWidth *
-		// 		(this._textboxImage.naturalHeight / this._textboxImage.naturalWidth); // Auto-scale height to maintain aspect ratio
-		// 	const textboxX = (this._width - textboxWidth) / 2;
-		// 	const textboxY = this._height - textboxHeight;
-
-		// 	// Draw textbox background
-		// 	this._ctx.drawImage(
-		// 		this._textboxImage,
-		// 		textboxX,
-		// 		textboxY,
-		// 		textboxWidth,
-		// 		textboxHeight,
-		// 	);
-
-		// 	// Draw NPC head (face image if available)
-		// 	const npcFaceImage = this._npcFaceImages.get(this._npcs[0].imageSrc);
-		// 	if (npcFaceImage) {
-		// 		// Simple square image - just position and draw
-		// 		const faceSize = textboxHeight * 0.53; // 80% of textbox height
-		// 		const faceX = textboxX + textboxWidth * 0.081;
-		// 		const faceY = textboxY + textboxHeight * 0.227;
-		// 		const faceW = faceSize * 0.951; // reduce width to fit better in the face frame
-		// 		const faceH = faceSize;
-
-		// 		this._ctx.save();
-		// 		this._ctx.beginPath();
-		// 		this._ctx.roundRect(faceX, faceY, faceW, faceH, 7); // little radius for better fit
-		// 		this._ctx.clip();
-
-		// 		// DEBUG: Background to visualize positioning
-		// 		// this._ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-		// 		// this._ctx.fillRect(faceX, faceY, faceW, faceH);
-
-		// 		this._ctx.drawImage(npcFaceImage, faceX, faceY, faceW, faceH);
-
-		// 		this._ctx.restore();
-		// 	}
-
-		// 	// Draw text
-		// 	this._ctx.fillStyle = "yellow";
-		// 	this._ctx.font = `bold ${Math.round(
-		// 		// Fit NPC name to available width
-		// 		this.fitNameToWidth(
-		// 			this._npcs[0].name,
-		// 			textboxWidth * 0.23,
-		// 			Math.round((textboxWidth / 960) * 21),
-		// 		),
-		// 	)}px Papyrus`;
-		// 	this._ctx.textBaseline = "middle";
-		// 	this._ctx.textAlign = "center";
-		// 	this._ctx.fillText(
-		// 		this._npcs[0].name,
-		// 		textboxX + textboxWidth * 0.396,
-		// 		textboxY + textboxHeight * 0.259,
-		// 	);
-
-		// 	this._ctx.fillStyle = "black";
-		// 	this._ctx.font = `bold ${Math.round((textboxWidth / 960) * 26)}px Papyrus`;
-		// 	this._ctx.textBaseline = "top";
-		// 	this._ctx.textAlign = "left";
-		// 	this._ctx.fillText(
-		// 		this._npcs[0].message[0],
-		// 		textboxX + textboxWidth * 0.29,
-		// 		textboxY + textboxHeight * 0.4,
-		// 	);
-		// }
-	}
-
-	/**
-	 * Fits text to a max width by reducing font size if needed
-	 * Returns the final font size that fits
-	 */
-	private fitNameToWidth(
-		text: string,
-		maxWidth: number,
-		baseFontSize: number,
-	): number {
-		let fontSize = baseFontSize;
-		this._ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
-		let textWidth = this._ctx.measureText(text).width;
-
-		// Reduce font size until text fits with 10px margin on each side
-		while (textWidth > maxWidth - 20 && fontSize > 8) {
-			fontSize -= 0.5;
-			this._ctx.font = `${Game.FONT_WEIGHT} ${Math.round(fontSize)}px ${Game.FONT_FAMILY}`;
-			textWidth = this._ctx.measureText(text).width;
-		}
-
-		return fontSize;
-	}
-
-	private wrapDialog(text: string, maxWidth: number): string[] {
-		const words = text.split(" ");
-		const lines: string[] = [];
-		let currentLine = "";
-
-		for (const word of words) {
-			const testLine = currentLine + (currentLine ? " " : "") + word;
-			const metrics = this._ctx.measureText(testLine);
-
-			if (metrics.width > maxWidth && currentLine) {
-				lines.push(currentLine);
-				currentLine = word;
-			} else {
-				currentLine = testLine;
-			}
-		}
-
-		if (currentLine) {
-			lines.push(currentLine);
-		}
-
-		return lines;
 	}
 }
