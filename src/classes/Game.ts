@@ -191,7 +191,7 @@ export class Game {
 				: 0.016;
 			this._lastTime = timestamp;
 
-			///////////////////////// UPDATE /////////////////////////
+			// ======================== UPDATE ========================
 			if (!this._bee.isFrozen)
 				this._bee.update(
 					this._keys,
@@ -221,7 +221,7 @@ export class Game {
 
 			this._tick += dt * 60;
 
-			///////////////////////// DRAW /////////////////////////
+			// ======================== DRAW ========================
 			// Loading screen
 			if (!(this._skyImage && this._beeSprite && this._groundImage)) {
 				this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
