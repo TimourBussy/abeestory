@@ -120,7 +120,8 @@ export class Game {
 			this._textboxImage = textbox;
 			this._groundHeight = ground.naturalHeight - 62;
 
-			npcSrcs.forEach((src, i) => this._npcImages.set(src, npcImgs[i]));
+			for (const [i, src] of npcSrcs.entries())
+				this._npcImages.set(src, npcImgs[i]);
 
 			// Load NPC face images if they exist
 			const faceSrcs = npcSrcs.map((src) => {
@@ -132,11 +133,9 @@ export class Game {
 				faceSrcs.map((src) => this.loadImage(src)),
 			);
 
-			faceImgs.forEach((result, i) => {
-				if (result.status === "fulfilled") {
+			for (const [i, result] of faceImgs.entries())
+				if (result.status === "fulfilled")
 					this._npcFaceImages.set(npcSrcs[i], result.value);
-				}
-			});
 		})();
 	}
 
@@ -202,7 +201,7 @@ export class Game {
 				dt,
 			);
 
-		this._npcs.forEach((npc) => {
+		for (const npc of this._npcs) {
 			const npcImage = this._npcImages.get(npc.imageSrc);
 			if (npcImage) {
 				npc.y =
@@ -212,7 +211,7 @@ export class Game {
 					npc.randomYOffset;
 			}
 			npc.update();
-		});
+		}
 
 		// Camera follows the bee horizontally
 		this._cameraX +=
@@ -265,9 +264,9 @@ export class Game {
 		}
 
 		// NPCs
-		this._npcs.forEach((npc) => {
+		for (const npc of this._npcs) {
 			const npcImage = this._npcImages.get(npc.imageSrc);
-			if (!npcImage) return;
+			if (!npcImage) continue;
 
 			this._ctx.drawImage(
 				npcImage,
@@ -281,7 +280,7 @@ export class Game {
 				npcImage.naturalHeight * npc.scale,
 			);
 
-			if (!npc.isNearBee(this._bee)) return;
+			if (!npc.isNearBee(this._bee)) continue;
 
 			const indicatorX =
 				npc.x -
@@ -301,7 +300,7 @@ export class Game {
 			this._ctx.closePath();
 			this._ctx.fill();
 			this._ctx.restore();
-		});
+		}
 
 		// Bee
 		const screenX = this._bee.x - this._cameraX;
@@ -404,17 +403,18 @@ export class Game {
 			this._ctx.textBaseline = "top";
 			this._ctx.textAlign = "left";
 
-			this.wrapDialog(this._npcs[0].message[0], textboxWidth * 0.65).forEach(
-				(line, index) => {
-					// wrap dialog to max text width
-					this._ctx.fillText(
-						line,
-						textboxX + textboxWidth * 0.29,
-						textboxY + textboxHeight * 0.4 + index * 30, // * lineHeight
-					);
-				},
+			const dialogLines = this.wrapDialog(
+				this._npcs[0].message[0],
+				textboxWidth * 0.65,
 			);
-		}
+			for (const [index, line] of dialogLines.entries())
+				// wrap dialog to max text width
+				this._ctx.fillText(
+					line,
+					textboxX + textboxWidth * 0.29,
+					textboxY + textboxHeight * 0.4 + index * 30, // * lineHeight
+				);
+		} else this._bee.isFrozen = false; // Unfreeze bee when dialog closes
 
 		// DEBUG - DISPLAY TEXTBOX
 		// if (this._npcs[0].message && this._textboxImage) {
@@ -516,7 +516,7 @@ export class Game {
 		const lines: string[] = [];
 		let currentLine = "";
 
-		words.forEach((word) => {
+		for (const word of words) {
 			const testLine = currentLine + (currentLine ? " " : "") + word;
 			const metrics = this._ctx.measureText(testLine);
 
@@ -526,7 +526,7 @@ export class Game {
 			} else {
 				currentLine = testLine;
 			}
-		});
+		}
 
 		if (currentLine) {
 			lines.push(currentLine);
