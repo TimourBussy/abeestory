@@ -60,14 +60,15 @@ export class Bee extends Sprite {
 
 		if (this._vy > Bee.MAX_FALL_SPEED) this._vy = Bee.MAX_FALL_SPEED;
 
-		if (keys.left) {
+		// Handle horizontal movement
+		if (keys.left && !keys.right) {
 			this._vx -= Bee.HORIZONTAL_ACCEL * dt;
 			this.direction = -1;
-		}
-		if (keys.right) {
+		} else if (keys.right && !keys.left) {
 			this._vx += Bee.HORIZONTAL_ACCEL * dt;
 			this.direction = 1;
 		}
+		// If both are pressed, they cancel each other (no acceleration, direction unchanged)
 
 		this._vx *= Math.pow(0.01, dt); // friction
 
