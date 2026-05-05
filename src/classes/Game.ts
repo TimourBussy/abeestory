@@ -158,9 +158,22 @@ export class Game {
       // Handle space bar for dialog interaction
       if (e.code === "Space") {
         e.preventDefault();
+        if (this._dialogManager.activeDialogNPC) {
+          this._dialogManager.nextDialog();
+        } else {
+          this._dialogManager.handleInteraction(this._npcs, this._bee);
+        }
+      }
+    });
+
+    window.addEventListener("click", () => {
+      if (this._dialogManager.activeDialogNPC) {
+        this._dialogManager.nextDialog();
+      } else {
         this._dialogManager.handleInteraction(this._npcs, this._bee);
       }
     });
+
     window.addEventListener("keyup", (e) => {
       if (Game.KEY_CODES.up.includes(e.code)) this._keys.up = false;
       if (Game.KEY_CODES.left.includes(e.code)) this._keys.left = false;
@@ -210,6 +223,7 @@ export class Game {
           this._groundHeight -
           npc.randomYOffset;
       }
+      npc.faceDirection = this._bee.x < npc.x ? 1 : -1;
       npc.update();
     }
 
@@ -268,17 +282,24 @@ export class Game {
       const npcImage = this._npcImages.get(npc.imageSrc);
       if (!npcImage) continue;
 
+      this._ctx.save();
+      this._ctx.translate(
+        npc.x - this._cameraX + (npcImage.naturalWidth * npc.scale) / 2,
+        0,
+      );
+      this._ctx.scale(npc.faceDirection, 1);
       this._ctx.drawImage(
         npcImage,
         0,
         0,
         npcImage.naturalWidth,
         npcImage.naturalHeight,
-        npc.x - this._cameraX,
+        -(npcImage.naturalWidth * npc.scale) / 2,
         npc.y,
         npcImage.naturalWidth * npc.scale,
         npcImage.naturalHeight * npc.scale,
       );
+      this._ctx.restore();
 
       if (!npc.isNearBee(this._bee)) continue;
 
@@ -290,16 +311,7 @@ export class Game {
       const indicatorY =
         npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
 
-      // Draw little triangle indicator above NPC
-      this._ctx.save();
-      this._ctx.fillStyle = "orange";
-      this._ctx.beginPath();
-      this._ctx.moveTo(indicatorX, indicatorY + 12);
-      this._ctx.lineTo(indicatorX - 8, indicatorY);
-      this._ctx.lineTo(indicatorX + 8, indicatorY);
-      this._ctx.closePath();
-      this._ctx.fill();
-      this._ctx.restore();
+      this.drawTriangle(indicatorX, indicatorY, "down", "orange");
     }
 
     // Bee
@@ -339,6 +351,7 @@ export class Game {
 
     // Draw textbox if dialog is active
     if (this._dialogManager.activeDialogNPC && this._textboxImage) {
+      // if (this._textboxImage) { // FOR DEBUG
       this._bee.isFrozen = true; // Freeze bee movement during dialog
       const textboxWidth = this._width * 0.6;
       const textboxHeight =
@@ -404,7 +417,7 @@ export class Game {
       this._ctx.textAlign = "left";
 
       const dialogLines = this.wrapDialog(
-        this._npcs[0].message[0],
+        this._npcs[0].message[this._dialogManager.messageIndex],
         textboxWidth * 0.65,
       );
       for (const [index, line] of dialogLines.entries())
@@ -414,6 +427,10 @@ export class Game {
           textboxX + textboxWidth * 0.29,
           textboxY + textboxHeight * 0.4 + index * 30, // * lineHeight
         );
+
+      const triangleX = textboxX + textboxWidth - 67;
+      const triangleY = textboxY + textboxHeight - 45;
+      this.drawTriangle(triangleX, triangleY, "down");
     } else this._bee.isFrozen = false; // Unfreeze bee when dialog closes
   }
 
@@ -468,25 +485,26 @@ export class Game {
     x: number,
     y: number,
     direction: "up" | "right" | "down" | "left",
+    color: string = "black",
   ): void {
     this._ctx.save();
-    this._ctx.fillStyle = "orange";
+    this._ctx.fillStyle = color;
     this._ctx.beginPath();
 
     if (direction === "up") {
-      this._ctx.moveTo(x, y + 12);
-      this._ctx.lineTo(x - 8, y);
-      this._ctx.lineTo(x + 8, y);
-    } else if (direction === "right") {
-      this._ctx.moveTo(x - 12, y);
-      this._ctx.lineTo(x, y - 8);
-      this._ctx.lineTo(x, y + 8);
-    } else if (direction === "down") {
       this._ctx.moveTo(x, y - 12);
       this._ctx.lineTo(x - 8, y);
       this._ctx.lineTo(x + 8, y);
-    } else if (direction === "left") {
+    } else if (direction === "right") {
       this._ctx.moveTo(x + 12, y);
+      this._ctx.lineTo(x, y - 8);
+      this._ctx.lineTo(x, y + 8);
+    } else if (direction === "down") {
+      this._ctx.moveTo(x, y + 12);
+      this._ctx.lineTo(x - 8, y);
+      this._ctx.lineTo(x + 8, y);
+    } else if (direction === "left") {
+      this._ctx.moveTo(x - 12, y);
       this._ctx.lineTo(x, y - 8);
       this._ctx.lineTo(x, y + 8);
     }
