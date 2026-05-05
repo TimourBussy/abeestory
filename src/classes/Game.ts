@@ -293,7 +293,7 @@ export class Game {
 				const indicatorY =
 					npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY; // up and down movement
 
-				// Draw little triangle indicator above NPC (pointing up)
+				// Draw little triangle indicator above NPC
 				this.drawTriangle(indicatorX, indicatorY, "up");
 			}
 
@@ -460,21 +460,31 @@ export class Game {
 		requestAnimationFrame(loop);
 	}
 
-	private drawTriangle(x: number, y: number, direction: "up" | "down"): void {
+	private drawTriangle(
+		x: number,
+		y: number,
+		direction: "up" | "right" | "down" | "left",
+	): void {
 		this._ctx.save();
 		this._ctx.fillStyle = "orange";
 		this._ctx.beginPath();
 
 		if (direction === "up") {
-			// Points upward
 			this._ctx.moveTo(x, y + 12);
 			this._ctx.lineTo(x - 8, y);
 			this._ctx.lineTo(x + 8, y);
-		} else {
-			// Points downward
+		} else if (direction === "right") {
+			this._ctx.moveTo(x - 12, y);
+			this._ctx.lineTo(x, y - 8);
+			this._ctx.lineTo(x, y + 8);
+		} else if (direction === "down") {
 			this._ctx.moveTo(x, y - 12);
 			this._ctx.lineTo(x - 8, y);
 			this._ctx.lineTo(x + 8, y);
+		} else if (direction === "left") {
+			this._ctx.moveTo(x + 12, y);
+			this._ctx.lineTo(x, y - 8);
+			this._ctx.lineTo(x, y + 8);
 		}
 
 		this._ctx.closePath();
