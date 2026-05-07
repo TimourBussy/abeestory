@@ -181,8 +181,6 @@ export class Game {
     window.addEventListener("click", () => {
       if (this._dialogManager.activeDialogNPC) {
         this._dialogManager.nextDialog();
-      } else {
-        this._dialogManager.handleInteraction(this._npcs, this._bee);
       }
     });
 
