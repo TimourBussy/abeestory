@@ -18,7 +18,7 @@
    docker compose up --build
 ```
 
-5. Wait for the build to finish — you should see a line like:
+5. Wait for the build to finish — you should see a line like:  
    `Local: http://localhost:5173`
 6. Open that link in your browser
 
