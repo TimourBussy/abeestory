@@ -6,7 +6,6 @@ export class NPC extends Sprite {
 
   private _imageSrc: string;
   private _scale: number;
-  private _faceDirection: 1 | -1 = 1;
   private _randomYOffset: number;
 
   private _triangleOffsetX: number; // (for better align with the npc sprite)
@@ -40,14 +39,6 @@ export class NPC extends Sprite {
 
   get scale(): number {
     return this._scale;
-  }
-
-  get faceDirection(): 1 | -1 {
-    return this._faceDirection;
-  }
-
-  set faceDirection(value: 1 | -1) {
-    this._faceDirection = value;
   }
 
   get randomYOffset(): number {

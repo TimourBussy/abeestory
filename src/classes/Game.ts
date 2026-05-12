@@ -87,8 +87,49 @@ export class Game {
           "Grâce à ça, je peux m’assurer que la ruche est en bonne santé sans la déranger.",
         ],
         "/sprites/npc1.png",
-        18,
-        0,
+        18, // triangle x offset to better align with the character's head
+      ),
+    );
+    this._npcs.push(
+      new NPC(
+        1500,
+        "Gardienne des Fleurs",
+        [
+          "Bonjour petite abeille ! Tu sais pourquoi les fleurs ont autant de couleurs différentes ?",
+          "Certaines attirent les abeilles avec leurs couleurs ou leur odeur pour être pollinisées.",
+          "Quand tu transportes du pollen d’une fleur à une autre, tu aides les plantes à produire des fruits et des graines !",
+          "Sans les abeilles, beaucoup de plantes auraient du mal à se reproduire.",
+        ],
+        "/sprites/npc2.png",
+      ),
+    );
+    this._npcs.push(
+      new NPC(
+        2000,
+        "Jardinière du Verger",
+        [
+          "Coucou petite abeille !",
+          "Les abeilles ne fabriquent pas seulement du miel. Elles aident aussi les agriculteurs et les jardiniers.",
+          "Beaucoup de fruits comme les pommes, les fraises ou les cerises dépendent de la pollinisation.",
+          "Quand les abeilles disparaissent d’une zone, les récoltes peuvent devenir beaucoup plus petites.",
+          "Chaque petite visite que tu fais sur une fleur aide la nature à rester en bonne santé !"
+        ],
+        "/sprites/npc3.png",
+      ),
+    );
+    this._npcs.push(
+      new NPC(
+        2500,
+        "Maître Apiculteur",
+        [
+          "Bonjour petite abeille ! Tu vois ce cadre rempli d’alvéoles ? C’est là que les abeilles stockent le miel.",
+          "Pour fabriquer une petite quantité de miel, une colonie doit visiter des milliers de fleurs.",
+          "Les abeilles transforment le nectar en miel directement dans la ruche grâce à leur travail collectif.",
+          "Chaque abeille a un rôle important : certaines récoltent le nectar, d’autres protègent la ruche ou s’occupent des larves.",
+          "Une ruche fonctionne un peu comme une grande équipe parfaitement organisée !"
+        ],
+        "/sprites/npc4.png",
+        10,
       ),
     );
 
@@ -224,15 +265,6 @@ export class Game {
           npcImage.naturalHeight * npc.scale -
           this._groundHeight -
           npc.randomYOffset;
-        // NPC turns only when bee completely passes on either side
-        if (this._bee.x + Bee.SIZE < npc.x) {
-          // Bee is completely to the left
-          npc.faceDirection = 1;
-        } else if (this._bee.x >= npc.x + npcImage.naturalWidth * npc.scale) {
-          // Bee is completely to the right
-          npc.faceDirection = -1;
-        }
-        // Otherwise, keep the current direction
       }
       npc.update();
     }
@@ -297,7 +329,6 @@ export class Game {
         npc.x - this._cameraX + (npcImage.naturalWidth * npc.scale) / 2,
         0,
       );
-      this._ctx.scale(npc.faceDirection, 1);
       this._ctx.drawImage(
         npcImage,
         0,
@@ -380,7 +411,8 @@ export class Game {
       );
 
       // Draw NPC head (face image if available)
-      const npcFaceImage = this._npcFaceImages.get(this._npcs[0].imageSrc);
+      const activeNPC = this._dialogManager.activeDialogNPC!;
+      const npcFaceImage = this._npcFaceImages.get(activeNPC.imageSrc);
       if (npcFaceImage) {
         // Simple square image - just position and draw
         const faceSize = textboxHeight * 0.53; // 80% of textbox height
@@ -404,7 +436,7 @@ export class Game {
       this._ctx.font = `bold ${Math.round(
         // Fit NPC name to available width
         this.fitNameToWidth(
-          this._npcs[0].name,
+          activeNPC.name,
           textboxWidth * 0.23,
           Math.round((textboxWidth / 960) * 21),
         ),
@@ -412,7 +444,7 @@ export class Game {
       this._ctx.textBaseline = "middle";
       this._ctx.textAlign = "center";
       this._ctx.fillText(
-        this._npcs[0].name,
+        activeNPC.name,
         textboxX + textboxWidth * 0.396,
         textboxY + textboxHeight * 0.259,
       );
@@ -423,7 +455,7 @@ export class Game {
       this._ctx.textAlign = "left";
 
       for (const [index, line] of this.wrapDialog(
-        this._npcs[0].message[this._dialogManager.messageIndex],
+        activeNPC.message[this._dialogManager.messageIndex],
         textboxWidth * 0.65,
       ).entries())
         // Wrap dialog to max text width
