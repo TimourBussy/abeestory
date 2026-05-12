@@ -34,14 +34,11 @@ export class Game {
     left: boolean;
     right: boolean;
   };
-  private _mouseX: number = 0;
-  private _mouseY: number = 0;
 
   // ============ IMAGES ============
   private _skyImage: HTMLImageElement | null = null;
   private _beeSprite: HTMLImageElement | null = null;
   private _groundImage: HTMLImageElement | null = null;
-  private _questBookImage: HTMLImageElement | null = null;
   private _textboxImage: HTMLImageElement | null = null;
   private _npcImages: Map<string, HTMLImageElement> = new Map();
   private _npcFaceImages: Map<string, HTMLImageElement> = new Map();
@@ -54,12 +51,6 @@ export class Game {
   // ============ SYSTEMS ============
   private _dialogManager: DialogManager;
   private _cameraX: number = 0;
-
-  // ============ QUEST BOOK ============
-  private _questBookX: number = 0;
-  private _questBookY: number = 0;
-  private _questBookWidth: number = 0;
-  private _questBookHeight: number = 0;
 
   constructor(rootElement: HTMLElement) {
     this._rootElement = rootElement;
@@ -94,8 +85,6 @@ export class Game {
           "Salut petite abeille ! Moi, je surveille les ruches grâce à des capteurs connectés.",
           "Ils me donnent des infos comme la température, l’humidité… et même l’activité des abeilles !",
           "Grâce à ça, je peux m’assurer que la ruche est en bonne santé sans la déranger.",
-          "Mais une ruche en bonne santé a besoin de nectar… et ça, c’est ton boulot !",
-          "Va me chercher du nectar en pollinisant une fleur, puis reviens me voir !",
         ],
         "/sprites/npc1.png",
         18,
@@ -115,20 +104,17 @@ export class Game {
       // Collect unique NPC image sources
       const npcSrcs = [...new Set(this._npcs.map((npc) => npc.imageSrc))];
 
-      const [sky, bee, ground, questBook, textbox, ...npcImgs] =
-        await Promise.all([
-          this.loadImage("/sprites/sky.png"),
-          this.loadImage("/sprites/bee.png"),
-          this.loadImage("/sprites/ground.png"),
-          this.loadImage("/sprites/quest_book.png"),
-          this.loadImage("/sprites/textbox.png"),
-          ...npcSrcs.map((src) => this.loadImage(src)),
-        ]);
+      const [sky, bee, ground, textbox, ...npcImgs] = await Promise.all([
+        this.loadImage("/sprites/sky.png"),
+        this.loadImage("/sprites/bee.png"),
+        this.loadImage("/sprites/ground.png"),
+        this.loadImage("/sprites/textbox.png"),
+        ...npcSrcs.map((src) => this.loadImage(src)),
+      ]);
 
       this._skyImage = sky;
       this._beeSprite = bee;
       this._groundImage = ground;
-      this._questBookImage = questBook;
       this._textboxImage = textbox;
       this._groundHeight = ground.naturalHeight - 62;
 
@@ -188,12 +174,6 @@ export class Game {
       if (Game.KEY_CODES.up.includes(e.code)) this._keys.up = false;
       if (Game.KEY_CODES.left.includes(e.code)) this._keys.left = false;
       if (Game.KEY_CODES.right.includes(e.code)) this._keys.right = false;
-    });
-
-    window.addEventListener("mousemove", (e) => {
-      const rect = this._canvas.getBoundingClientRect();
-      this._mouseX = (e.clientX - rect.left) * (Game.GAME_WIDTH / rect.width);
-      this._mouseY = (e.clientY - rect.top) * (Game.GAME_HEIGHT / rect.height);
     });
 
     // Setup animation
@@ -378,38 +358,6 @@ export class Game {
         Bee.SIZE,
       );
     this._ctx.restore();
-
-    // Quest book icon
-    if (this._questBookImage) {
-      const scale = 0.15;
-      this._questBookX = this._width - 127;
-      this._questBookY = 20;
-      this._questBookWidth = this._questBookImage.naturalWidth * scale;
-      this._questBookHeight = this._questBookImage.naturalHeight * scale;
-
-      this._ctx.save();
-
-      // Check if mouse is hovering over quest book
-      if (
-        this._mouseX >= this._questBookX &&
-        this._mouseX <= this._questBookX + this._questBookWidth &&
-        this._mouseY >= this._questBookY &&
-        this._mouseY <= this._questBookY + this._questBookHeight
-      ) {
-        this._ctx.filter = "brightness(1.2)";
-        this._canvas.style.cursor = "pointer";
-      } else {
-        this._canvas.style.cursor = "default";
-      }
-      this._ctx.drawImage(
-        this._questBookImage,
-        this._questBookX,
-        this._questBookY,
-        this._questBookWidth,
-        this._questBookHeight,
-      );
-      this._ctx.restore();
-    }
 
     // Draw textbox if dialog is active
     if (this._dialogManager.activeDialogNPC && this._textboxImage) {
