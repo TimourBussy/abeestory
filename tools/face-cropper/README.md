@@ -22,7 +22,6 @@ An interactive web-based tool for cropping square face images from larger images
 
 - Saves cropped images as PNG
 - Auto-naming: `[originalname]_face.png`
-- Saves to `public/sprites/` directory
 - Server-side processing for maximum quality
 
 ## How to Use
@@ -42,15 +41,7 @@ docker compose up face-cropper -d
 2. **Position Crop**: Drag the blue dashed box to position the face
 3. **Adjust Size**: Use the slider to change the crop area size (in pixels)
 4. **Preview**: See the final result in real-time on the right side
-5. **Save**: Click "Save as PNG" to save `[name]_face.png` to `public/sprites/`
-
-## Output
-
-Cropped images are saved as:
-
-- **Location**: `public/sprites/[originalname]_face.png`
-- **Format**: PNG with full transparency support
-- **Size**: Square (width = height = crop size)
+5. **Save**: Click "Save as PNG" to save `[name]_face.png` and then drag the file to `public/sprites/`
 
 ## Architecture
 
@@ -59,7 +50,6 @@ face-cropper/
 ├── index.html           # Main UI
 ├── style.css            # Styling
 ├── src/
-│   ├── server.ts        # Express server + image saving
 │   └── script.ts        # Canvas logic & interactions
 ├── package.json         # Dependencies
 ├── tsconfig.json        # TypeScript config
@@ -69,7 +59,7 @@ face-cropper/
 ## Technical Stack
 
 - **Frontend**: HTML5 Canvas, TypeScript, CSS3
-- **Backend**: Express.js, Node.js Canvas API
+- **Backend**: Node.js Canvas API
 - **Deployment**: Docker
 
 ## Environment Variables
