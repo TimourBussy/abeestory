@@ -45,7 +45,7 @@ export class Bee extends Sprite {
 	}
 
 	update(
-		keys: { up: boolean; down: boolean; left: boolean; right: boolean },
+		keys: { up: boolean; left: boolean; right: boolean },
 		width: number,
 		height: number,
 		groundHeight: number = 0,

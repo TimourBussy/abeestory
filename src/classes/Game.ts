@@ -30,7 +30,6 @@ export class Game {
   // ============ INPUT ============
   private _keys: {
     up: boolean;
-    down: boolean;
     left: boolean;
     right: boolean;
   };
@@ -135,7 +134,7 @@ export class Game {
 
     // Create bee
     this._bee = new Bee(100, this._height - Bee.SIZE - this._groundHeight);
-    this._keys = { up: false, down: false, left: false, right: false };
+    this._keys = { up: false, left: false, right: false };
 
     // Initialize dialog manager
     this._dialogManager = new DialogManager();
