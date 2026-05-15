@@ -40,6 +40,10 @@ export class Game {
   private _tick: number = 0;
   private _lastTime: number = 0;
 
+  // Input tracking
+  private _mouseX: number = 0;
+  private _mouseY: number = 0;
+
   constructor(rootElement: HTMLElement) {
     this._rootElement = rootElement;
 
@@ -200,20 +204,32 @@ export class Game {
           "Chaque abeille joue un rôle précieux… et chaque personne peut aussi aider en protégeant les pollinisateurs autour d’elle !",
           "Merci d’avoir joué à A Bee Story. J’espère que cette aventure t’aura appris plein de choses !",
           "Et pour te remercier… voici un code t'offrant une réduction de 20% sur ton prochain achat ! Note le bien !",
+          this.generateReductionCode(),
         ],
         "/sprites/npc8.png",
+        20,
       ),
     );
+  }
+
+  private generateReductionCode(): string {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
+    for (let i = 0; i < 10; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 
   private async loadAssets(): Promise<void> {
     const npcSrcs = [...new Set(this._npcs.map((npc) => npc.imageSrc))];
 
-    const [sky, bee, ground, textbox, ...npcImgs] = await Promise.all([
+    const [sky, bee, ground, textbox, soundBtn, ...npcImgs] = await Promise.all([
       this.loadImage("/sprites/sky.png"),
       this.loadImage("/sprites/bee.png"),
       this.loadImage("/sprites/ground.png"),
       this.loadImage("/sprites/textbox.png"),
+      this.loadImage("/sprites/sound_btn.png"),
       ...npcSrcs.map((src) => this.loadImage(src)),
     ]);
 
@@ -221,6 +237,7 @@ export class Game {
     this._renderManager.beeSprite = bee;
     this._renderManager.groundImage = ground;
     this._renderManager.textboxImage = textbox;
+    this._renderManager.soundBtnSprite = soundBtn;
 
     for (const [i, src] of npcSrcs.entries())
       this._renderManager.setNpcImage(src, npcImgs[i]);
@@ -287,23 +304,28 @@ export class Game {
       const rect = this._canvas.getBoundingClientRect();
       const mouseX = ((e.clientX - rect.left) * Game.GAME_WIDTH) / rect.width;
       const mouseY = ((e.clientY - rect.top) * Game.GAME_HEIGHT) / rect.height;
+      this._mouseX = mouseX;
+      this._mouseY = mouseY;
       this._inputManager.setMousePosition(mouseX, mouseY);
       this._menuManager.setMousePosition(mouseX, mouseY);
     });
 
     window.addEventListener("click", (e) => {
-      if (!this._menuManager.gameStarted) {
-        const rect = this._canvas.getBoundingClientRect();
+      const rect = this._canvas.getBoundingClientRect();
+      const clickX = ((e.clientX - rect.left) * Game.GAME_WIDTH) / rect.width;
+      const clickY = ((e.clientY - rect.top) * Game.GAME_HEIGHT) / rect.height;
 
-        if (
-          this._menuManager.isClickOnPlayButton(
-            ((e.clientX - rect.left) * Game.GAME_WIDTH) / rect.width,
-            ((e.clientY - rect.top) * Game.GAME_HEIGHT) / rect.height,
-          )
-        ) {
+      if (!this._menuManager.gameStarted) {
+        if (this._menuManager.isClickOnPlayButton(clickX, clickY)) {
           this._menuManager.gameStarted = true;
           this._audioManager.playBackgroundMusic();
         }
+        return;
+      }
+
+      // Handle sound button click
+      if (this._renderManager.isClickOnSoundButton(clickX, clickY)) {
+        this._audioManager.toggleMute();
         return;
       }
 
@@ -418,7 +440,12 @@ export class Game {
     }
 
     // Reset cursor to default when game has started
-    this._canvas.style.cursor = "default";
+    this._canvas.style.cursor = this._renderManager.isMouseOverSoundButton(
+      this._mouseX,
+      this._mouseY,
+    )
+      ? "pointer"
+      : "default";
 
     // Draw game
     this._renderManager.drawGame(
@@ -428,6 +455,9 @@ export class Game {
       this._dialogManager,
       this._tick,
     );
+
+    // Draw sound button
+    this._renderManager.drawSoundButtonOnScreen(this._audioManager.isMuted);
 
     // Freeze/unfreeze bee based on dialog state
     this._bee.isFrozen = !!this._dialogManager.activeDialogNPC;

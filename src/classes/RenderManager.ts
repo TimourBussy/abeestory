@@ -12,6 +12,7 @@ export class RenderManager {
   private _beeSprite: HTMLImageElement | null = null;
   private _groundImage: HTMLImageElement | null = null;
   private _textboxImage: HTMLImageElement | null = null;
+  private _soundBtnSprite: HTMLImageElement | null = null;
   private _npcImages: Map<string, HTMLImageElement> = new Map();
   private _npcFaceImages: Map<string, HTMLImageElement> = new Map();
   private _groundHeight: number = 62;
@@ -61,6 +62,14 @@ export class RenderManager {
 
   set textboxImage(value: HTMLImageElement | null) {
     this._textboxImage = value;
+  }
+
+  get soundBtnSprite(): HTMLImageElement | null {
+    return this._soundBtnSprite;
+  }
+
+  set soundBtnSprite(value: HTMLImageElement | null) {
+    this._soundBtnSprite = value;
   }
 
   get npcImages(): Map<string, HTMLImageElement> {
@@ -287,6 +296,10 @@ export class RenderManager {
     } else bee.isFrozen = false;
   }
 
+  drawSoundButtonOnScreen(isMuted: boolean): void {
+    this.drawSoundButton(isMuted);
+  }
+
   private fitNameToWidth(
     text: string,
     maxWidth: number,
@@ -358,5 +371,56 @@ export class RenderManager {
     this._ctx.closePath();
     this._ctx.fill();
     this._ctx.restore();
+  }
+
+  drawSoundButton(isMuted: boolean): void {
+    if (!this._soundBtnSprite) return;
+
+    const buttonSize = 80;
+    const padding = 20;
+
+    // Sprite sheet is 1124px wide, divided into 2 sprites of 562px each
+    // Left sprite (0-562px): unmuted, Right sprite (562-1124px): muted
+    const spriteWidth = this._soundBtnSprite.naturalWidth / 2;
+
+    this._ctx.drawImage(
+      this._soundBtnSprite,
+      isMuted ? spriteWidth : 0,
+      0,
+      spriteWidth,
+      this._soundBtnSprite.naturalHeight,
+      this._width - buttonSize - padding,
+      padding,
+      buttonSize,
+      buttonSize,
+    );
+  }
+
+  isClickOnSoundButton(clickX: number, clickY: number): boolean {
+    const buttonSize = 80;
+    const padding = 20;
+    const x = this._width - buttonSize - padding;
+    const y = padding;
+
+    return (
+      clickX >= x &&
+      clickX <= x + buttonSize &&
+      clickY >= y &&
+      clickY <= y + buttonSize
+    );
+  }
+
+  isMouseOverSoundButton(mouseX: number, mouseY: number): boolean {
+    const buttonSize = 80;
+    const padding = 20;
+    const x = this._width - buttonSize - padding;
+    const y = padding;
+
+    return (
+      mouseX >= x &&
+      mouseX <= x + buttonSize &&
+      mouseY >= y &&
+      mouseY <= y + buttonSize
+    );
   }
 }
