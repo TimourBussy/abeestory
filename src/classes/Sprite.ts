@@ -1,4 +1,4 @@
-export abstract class Sprite {
+export class Sprite {
 	private _x: number;
 	private _y: number;
 

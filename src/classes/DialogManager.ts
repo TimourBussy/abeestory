@@ -17,7 +17,11 @@ export class DialogManager {
     return this._messageIndex;
   }
 
-  handleInteraction(npcs: NPC[], bee: Bee): void {
+  handleInteraction(
+    npcs: NPC[],
+    bee: Bee,
+    npcDimensions: Map<NPC, { width: number; height: number }> = new Map(),
+  ): void {
     // If already in dialog, progress to next message
     if (this._activeDialogNPC) {
       this.progressDialog();
@@ -26,7 +30,8 @@ export class DialogManager {
 
     // Check which NPC is near the bee to open dialog
     for (const npc of npcs) {
-      if (npc.isNearBee(bee)) {
+      const dims = npcDimensions.get(npc) || { width: 0, height: 0 };
+      if (npc.isNearBee(bee, dims.width, dims.height)) {
         this._activeDialogNPC = npc;
         this._messageIndex = 0;
         return;

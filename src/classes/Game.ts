@@ -1,6 +1,7 @@
 import { Bee } from "./Bee";
 import { NPC } from "./NPC";
 import { DialogManager } from "./DialogManager";
+import { Sprite } from "./Sprite";
 
 export class Game {
   static readonly WORLD_WIDTH = 5000;
@@ -86,7 +87,7 @@ export class Game {
           "Grâce à ça, je peux m’assurer que la ruche est en bonne santé sans la déranger.",
         ],
         "/sprites/npc1.png",
-        18, // triangle x offset to better align with the character's head
+        15, // triangle x offset to better align with the character's head
       ),
     );
     this._npcs.push(
@@ -111,7 +112,7 @@ export class Game {
           "Les abeilles ne fabriquent pas seulement du miel. Elles aident aussi les agriculteurs et les jardiniers.",
           "Beaucoup de fruits comme les pommes, les fraises ou les cerises dépendent de la pollinisation.",
           "Quand les abeilles disparaissent d’une zone, les récoltes peuvent devenir beaucoup plus petites.",
-          "Chaque petite visite que tu fais sur une fleur aide la nature à rester en bonne santé !"
+          "Chaque petite visite que tu fais sur une fleur aide la nature à rester en bonne santé !",
         ],
         "/sprites/npc3.png",
       ),
@@ -125,10 +126,55 @@ export class Game {
           "Pour fabriquer une petite quantité de miel, une colonie doit visiter des milliers de fleurs.",
           "Les abeilles transforment le nectar en miel directement dans la ruche grâce à leur travail collectif.",
           "Chaque abeille a un rôle important : certaines récoltent le nectar, d’autres protègent la ruche ou s’occupent des larves.",
-          "Une ruche fonctionne un peu comme une grande équipe parfaitement organisée !"
+          "Une ruche fonctionne un peu comme une grande équipe parfaitement organisée !",
         ],
         "/sprites/npc4.png",
         10,
+      ),
+    );
+    this._npcs.push(
+      new NPC(
+        3000,
+        "Jeune Apiculteur",
+        [
+          "Salut petite abeille ! Tu savais que les abeilles communiquent entre elles grâce à une danse ?",
+          "Quand une abeille trouve beaucoup de fleurs, elle retourne à la ruche pour indiquer leur position aux autres.",
+          "La direction et les mouvements de la danse permettent aux abeilles de savoir où aller !",
+          "Même sans parler, toute la colonie peut ainsi travailler ensemble très efficacement.",
+          "Les scientifiques étudient encore aujourd’hui ce comportement fascinant !",
+        ],
+        "/sprites/npc5.png",
+        -5,
+      ),
+    );
+    this._npcs.push(
+      new NPC(
+        3500,
+        "Récolteuse de Graines",
+        [
+          "Bonjour petite abeille ! Après la pollinisation, certaines fleurs peuvent produire des graines.",
+          "Ces graines permettent aux plantes de repousser et de créer de nouvelles fleurs.",
+          "Les abeilles participent donc au renouvellement de nombreuses plantes dans la nature.",
+          "Sans pollinisateurs, certains paysages seraient beaucoup moins colorés et beaucoup moins vivants.",
+          "Chaque fleur pollinisée aide un peu la biodiversité !",
+        ],
+        "/sprites/npc6.png",
+        -22,
+      ),
+    );
+    this._npcs.push(
+      new NPC(
+        4000,
+        "Gardien des Collines",
+        [
+          "Bonjour petite abeille. Même les endroits rocheux comme celui-ci peuvent être utiles aux pollinisateurs.",
+          "Certaines abeilles sauvages ne vivent pas dans des ruches. Elles construisent leurs nids dans le sol ou entre les pierres.",
+          "Il existe des milliers d’espèces d’abeilles différentes dans le monde, et beaucoup ne produisent même pas de miel.",
+          "Toutes ces espèces jouent pourtant un rôle important pour la pollinisation des plantes !",
+          "Protéger les abeilles, ce n’est pas seulement protéger une ruche… c’est protéger tout un écosystème.",
+        ],
+        "/sprites/npc7.png",
+        -57,
       ),
     );
 
@@ -199,7 +245,11 @@ export class Game {
         if (this._dialogManager.activeDialogNPC) {
           this._dialogManager.nextDialog();
         } else {
-          this._dialogManager.handleInteraction(this._npcs, this._bee);
+          this._dialogManager.handleInteraction(
+            this._npcs,
+            this._bee,
+            this.getNPCDimensionsMap(),
+          );
         }
       }
     });
@@ -244,6 +294,20 @@ export class Game {
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+  }
+
+  private getNPCDimensionsMap(): Map<NPC, { width: number; height: number }> {
+    const dimensions = new Map<NPC, { width: number; height: number }>();
+    for (const npc of this._npcs) {
+      const npcImage = this._npcImages.get(npc.imageSrc);
+      if (npcImage) {
+        dimensions.set(npc, {
+          width: npcImage.naturalWidth * npc.scale,
+          height: npcImage.naturalHeight * npc.scale,
+        });
+      }
+    }
+    return dimensions;
   }
 
   private update(dt: number = 1) {
@@ -341,14 +405,21 @@ export class Game {
       );
       this._ctx.restore();
 
-      if (!npc.isNearBee(this._bee)) continue;
+      if (
+        !npc.isNearBee(
+          this._bee,
+          npcImage.naturalWidth * npc.scale,
+          npcImage.naturalHeight * npc.scale,
+        )
+      )
+        continue;
 
       this.drawTriangle(
         npc.x -
           this._cameraX +
           (npcImage.naturalWidth * npc.scale) / 2 +
           npc.triangleOffsetX,
-        npc.y - 23 + Math.sin(this._tick * 0.1) * 4 + npc.triangleOffsetY, // up and down movement
+        npc.y - 23 + Math.sin(this._tick * 0.1) * 4, // up and down movement
         "down",
         "orange",
       );
