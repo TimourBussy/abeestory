@@ -1,7 +1,6 @@
 import { Bee } from "./Bee";
 import { NPC } from "./NPC";
 import { DialogManager } from "./DialogManager";
-import { Sprite } from "./Sprite";
 
 export class Game {
   static readonly WORLD_WIDTH = 5000;
@@ -34,6 +33,8 @@ export class Game {
     left: boolean;
     right: boolean;
   };
+  private _mouseX: number = 0;
+  private _mouseY: number = 0;
 
   // ============ IMAGES ============
   private _skyImage: HTMLImageElement | null = null;
@@ -51,6 +52,16 @@ export class Game {
   // ============ SYSTEMS ============
   private _dialogManager: DialogManager;
   private _cameraX: number = 0;
+
+  // ============ AUDIO ============
+  private _bgMusic: HTMLAudioElement;
+
+  // ============ MENU ============
+  private _gameStarted: boolean = false;
+  private _playBtnX: number = 0;
+  private _playBtnY: number = 0;
+  private _playBtnWidth: number = 0;
+  private _playBtnHeight: number = 0;
 
   constructor(rootElement: HTMLElement) {
     this._rootElement = rootElement;
@@ -185,6 +196,11 @@ export class Game {
     // Initialize dialog manager
     this._dialogManager = new DialogManager();
 
+    // Setup background music
+    this._bgMusic = new Audio("/audio/bg_music.wav");
+    this._bgMusic.loop = true;
+    this._bgMusic.volume = 0.5;
+
     // Load all images via Promise.all
     (async (): Promise<void> => {
       // Collect unique NPC image sources
@@ -254,16 +270,43 @@ export class Game {
       }
     });
 
-    window.addEventListener("click", () => {
-      if (this._dialogManager.activeDialogNPC) {
-        this._dialogManager.nextDialog();
-      }
-    });
-
     window.addEventListener("keyup", (e) => {
       if (Game.KEY_CODES.up.includes(e.code)) this._keys.up = false;
       if (Game.KEY_CODES.left.includes(e.code)) this._keys.left = false;
       if (Game.KEY_CODES.right.includes(e.code)) this._keys.right = false;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      const rect = this._canvas.getBoundingClientRect();
+      this._mouseX = ((e.clientX - rect.left) * Game.GAME_WIDTH) / rect.width;
+      this._mouseY = ((e.clientY - rect.top) * Game.GAME_HEIGHT) / rect.height;
+    });
+
+    window.addEventListener("click", (e) => {
+      if (!this._gameStarted) {
+        const rect = this._canvas.getBoundingClientRect();
+        const clickX = ((e.clientX - rect.left) * Game.GAME_WIDTH) / rect.width;
+        const clickY =
+          ((e.clientY - rect.top) * Game.GAME_HEIGHT) / rect.height;
+
+        if (
+          clickX >= this._playBtnX &&
+          clickX <= this._playBtnX + this._playBtnWidth &&
+          clickY >= this._playBtnY &&
+          clickY <= this._playBtnY + this._playBtnHeight
+        ) {
+          this._gameStarted = true;
+          this._bgMusic
+            .play()
+            .catch((err) => console.log("Audio playback failed:", err));
+        }
+        return;
+      }
+
+      // Handle game interactions
+      if (this._dialogManager.activeDialogNPC) {
+        this._dialogManager.nextDialog();
+      }
     });
 
     // Setup animation
@@ -341,6 +384,101 @@ export class Game {
     this._tick += dt * 60;
   }
 
+  private drawMenu() {
+    // Background
+    this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
+    this._ctx.fillRect(0, 0, this._width, this._height);
+
+    // Title "A BEE STORY" with bee sprite in place of BEE
+    this._ctx.fillStyle = "black";
+    this._ctx.font = "bold 80px Papyrus";
+    this._ctx.textBaseline = "middle";
+
+    const centerY = this._height / 2 - 60;
+    const beeSize = 120;
+    const spacing = 20;
+
+    // Measure text widths
+    const aWidth = this._ctx.measureText("A").width;
+
+    // Calculate total width and starting position
+    let startX =
+      this._width / 2 -
+      (aWidth +
+        spacing +
+        beeSize +
+        spacing +
+        this._ctx.measureText("STORY").width) /
+        2;
+
+    // Draw "A" text
+    this._ctx.textAlign = "left";
+    this._ctx.fillText("A", startX, centerY);
+    startX += aWidth + spacing;
+
+    // Draw bee sprite
+    if (this._beeSprite) {
+      this._ctx.drawImage(
+        this._beeSprite,
+        0,
+        0,
+        Bee.FRAME_W,
+        Bee.FRAME_H,
+        startX,
+        this._height / 2 - 142,
+        beeSize,
+        beeSize,
+      );
+    }
+    startX += beeSize + spacing;
+
+    // Draw "STORY" text
+    this._ctx.fillText("STORY", startX, centerY);
+
+    // Draw play button
+    this._playBtnWidth = 200;
+    this._playBtnHeight = 80;
+    this._playBtnX = this._width / 2 - this._playBtnWidth / 2;
+    this._playBtnY = this._height / 2 + 100;
+
+    // Button background
+    this._ctx.fillStyle = "rgba(255, 140, 0, 0.8)";
+    this._ctx.beginPath();
+    this._ctx.roundRect(
+      this._playBtnX,
+      this._playBtnY,
+      this._playBtnWidth,
+      this._playBtnHeight,
+      15,
+    );
+    this._ctx.fill();
+
+    // Button border
+    this._ctx.strokeStyle = "black";
+    this._ctx.lineWidth = 3;
+    this._ctx.stroke();
+
+    // Button text
+    this._ctx.fillStyle = "white";
+    this._ctx.font = "bold 48px Papyrus";
+    this._ctx.textAlign = "center";
+    this._ctx.textBaseline = "middle";
+    this._ctx.fillText(
+      "PLAY",
+      this._width / 2,
+      this._playBtnY + this._playBtnHeight / 2 + 7, // empiric adjustment for better vertical alignment
+    );
+
+    // Check if mouse is hovering over play button
+    const isHoveringPlayBtn =
+      this._mouseX >= this._playBtnX &&
+      this._mouseX <= this._playBtnX + this._playBtnWidth &&
+      this._mouseY >= this._playBtnY &&
+      this._mouseY <= this._playBtnY + this._playBtnHeight;
+
+    this._canvas.style.cursor = isHoveringPlayBtn ? "pointer" : "default";
+  }
+
   private draw() {
     // Loading screen
     if (!(this._skyImage && this._beeSprite && this._groundImage)) {
@@ -352,10 +490,19 @@ export class Game {
       return;
     }
 
+    // Show menu if game hasn't started
+    if (!this._gameStarted) {
+      this.drawMenu();
+      return;
+    }
+
+    // Reset cursor to default when game has started
+    this._canvas.style.cursor = "default";
+
     // Background
     this._ctx.fillStyle = Game.SKY_BACKUP_COLOR;
     this._ctx.fillRect(0, 0, this._width, this._height);
-
+ 
     // Sky with parallax effect
     const skyW = this._skyImage.naturalWidth * Game.SKY_SCALE;
     for (let x = -(this._cameraX * 0.05) % skyW; x < this._width; x += skyW) {
