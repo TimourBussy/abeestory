@@ -44,6 +44,10 @@ export class Game {
   private _mouseX: number = 0;
   private _mouseY: number = 0;
 
+  // WordPress integration
+  private _reductionCode: string = "";
+  private _reductionCodeSent: boolean = false;
+
   constructor(rootElement: HTMLElement) {
     this._rootElement = rootElement;
 
@@ -92,7 +96,53 @@ export class Game {
     this.loadAssets();
   }
 
+  private isWordPressEnvironment(): boolean {
+    return typeof (window as any).currentUserID !== "undefined";
+  }
+
+  private showLoginRequired(): void {
+    this._rootElement.innerHTML =
+      '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 24px; text-align: center;">' +
+      '<div style="background: lightblue; padding: 40px; border-radius: 10px;">' +
+      "<h1>Connectez-vous pour jouer</h1>" +
+      "<p>Vous devez avoir un compte et être connecté pour accéder à ce jeu.</p>" +
+      "</div>" +
+      "</div>";
+  }
+
+  private async saveReductionCodeIfWordPress(): Promise<void> {
+    if (!this.isWordPressEnvironment() || this._reductionCodeSent) {
+      return;
+    }
+
+    if (!this.isWordPressEnvironment()) {
+      console.log("Dev mode: Code de réduction généré:", this._reductionCode);
+      return;
+    }
+
+    try {
+      const userID = (window as any).currentUserID;
+      const response = await fetch("/wp-json/custom/v1/save-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userID, code: this._reductionCode }),
+      });
+
+      if (response.ok) {
+        this._reductionCodeSent = true;
+        console.log("Code de réduction envoyé au serveur");
+      } else {
+        console.error("Erreur lors de l'envoi du code:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Erreur d'envoi du code:", error);
+    }
+  }
+
   private createNPCs(): void {
+    // Générer le code de réduction une seule fois
+    this._reductionCode = this.generateReductionCode();
+
     this._npcs.push(
       new NPC(
         1000,
@@ -204,7 +254,7 @@ export class Game {
           "Chaque abeille joue un rôle précieux… et chaque personne peut aussi aider en protégeant les pollinisateurs autour d’elle !",
           "Merci d’avoir joué à A Bee Story. J’espère que cette aventure t’aura appris plein de choses !",
           "Et pour te remercier… voici un code t'offrant une réduction de 20% sur ton prochain achat ! Note le bien !",
-          this.generateReductionCode(),
+          this._reductionCode,
         ],
         "/sprites/npc8.png",
         20,
@@ -224,14 +274,16 @@ export class Game {
   private async loadAssets(): Promise<void> {
     const npcSrcs = [...new Set(this._npcs.map((npc) => npc.imageSrc))];
 
-    const [sky, bee, ground, textbox, soundBtn, ...npcImgs] = await Promise.all([
-      this.loadImage("/sprites/sky.png"),
-      this.loadImage("/sprites/bee.png"),
-      this.loadImage("/sprites/ground.png"),
-      this.loadImage("/sprites/textbox.png"),
-      this.loadImage("/sprites/sound_btn.png"),
-      ...npcSrcs.map((src) => this.loadImage(src)),
-    ]);
+    const [sky, bee, ground, textbox, soundBtn, ...npcImgs] = await Promise.all(
+      [
+        this.loadImage("/sprites/sky.png"),
+        this.loadImage("/sprites/bee.png"),
+        this.loadImage("/sprites/ground.png"),
+        this.loadImage("/sprites/textbox.png"),
+        this.loadImage("/sprites/sound_btn.png"),
+        ...npcSrcs.map((src) => this.loadImage(src)),
+      ],
+    );
 
     this._renderManager.skyImage = sky;
     this._renderManager.beeSprite = bee;
@@ -267,6 +319,15 @@ export class Game {
   }
 
   start(): void {
+    // Vérifier si on est dans WordPress et l'utilisateur est connecté
+    if (this.isWordPressEnvironment()) {
+      const userID = (window as any).currentUserID;
+      if (!userID) {
+        this.showLoginRequired();
+        return;
+      }
+    }
+
     // Setup event listeners
     window.addEventListener("keydown", (e) => {
       if (Game.KEY_CODES.up.includes(e.code))
@@ -414,6 +475,14 @@ export class Game {
 
     // Update tick
     this._tick += dt * 60;
+
+    // Envoyer le code de réduction si le dernier NPC dialogue
+    if (
+      this._npcs.length > 0 &&
+      this._dialogManager.activeDialogNPC === this._npcs[this._npcs.length - 1]
+    ) {
+      this.saveReductionCodeIfWordPress();
+    }
   }
 
   private draw(): void {
