@@ -3,14 +3,14 @@ export class AudioManager {
   private _isMuted: boolean = false;
 
   constructor() {
-    this._bgMusic = new Audio("/audio/bg_music.wav");
+    this._bgMusic = new Audio(`${import.meta.env.BASE_URL}/audio/bg_music.wav`);
     this._bgMusic.loop = true;
     this._bgMusic.volume = 0.5;
   }
 
   playBackgroundMusic(): Promise<void> {
     return this._bgMusic.play().catch((err) => {
-      console.log("Audio playback failed:", err);
+      console.error("Audio playback failed:", err);
     });
   }
 
@@ -23,11 +23,11 @@ export class AudioManager {
       this._bgMusic.pause();
     } else {
       this._bgMusic.play().catch((err) => {
-        console.log("Audio playback failed:", err);
+        console.error("Audio playback failed:", err);
       });
     }
   }
-  
+
   set volume(volume: number) {
     this._bgMusic.volume = Math.max(0, Math.min(1, volume));
   }

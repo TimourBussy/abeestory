@@ -59,11 +59,7 @@ export class NPC extends Sprite {
   }
 
   // Verify if the bee is nearby
-  isNearBee(
-    bee: Bee,
-    npcWidth: number = 0,
-    npcHeight: number = 0,
-  ): boolean {
+  isNearBee(bee: Bee, npcWidth: number = 0, npcHeight: number = 0): boolean {
     // Calculate bounds for NPC and bee
     const npcLeft = this.x;
     const npcRight = this.x + npcWidth;
@@ -97,9 +93,7 @@ export class NPC extends Sprite {
     }
     // else they overlap, yDistance = 0
 
-    return (
-      xDistance < NPC.NEARBY_DISTANCE && yDistance < NPC.NEARBY_DISTANCE
-    );
+    return xDistance < NPC.NEARBY_DISTANCE && yDistance < NPC.NEARBY_DISTANCE;
   }
 
   update() {}

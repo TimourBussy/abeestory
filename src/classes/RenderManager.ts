@@ -117,11 +117,7 @@ export class RenderManager {
 
     // Sky with parallax effect
     const skyW = this._skyImage!.naturalWidth * this.SKY_SCALE;
-    for (
-      let x = -(cameraX * 0.05) % skyW;
-      x < this._width;
-      x += skyW
-    ) {
+    for (let x = -(cameraX * 0.05) % skyW; x < this._width; x += skyW) {
       this._ctx.drawImage(
         this._skyImage!,
         x,
@@ -133,11 +129,7 @@ export class RenderManager {
 
     // Ground
     const groundW = this._groundImage!.naturalWidth;
-    for (
-      let x = -(cameraX % groundW);
-      x < this._width;
-      x += groundW - 1
-    ) {
+    for (let x = -(cameraX % groundW); x < this._width; x += groundW - 1) {
       this._ctx.drawImage(
         this._groundImage!,
         x,
@@ -168,7 +160,13 @@ export class RenderManager {
       );
       this._ctx.restore();
 
-      if (!npc.isNearBee(bee, npcImage.naturalWidth * npc.scale, npcImage.naturalHeight * npc.scale))
+      if (
+        !npc.isNearBee(
+          bee,
+          npcImage.naturalWidth * npc.scale,
+          npcImage.naturalHeight * npc.scale,
+        )
+      )
         continue;
 
       this.drawTriangle(
@@ -319,6 +317,7 @@ export class RenderManager {
   }
 
   private wrapDialog(text: string, maxWidth: number): string[] {
+    if (!text) return [""];
     const lines: string[] = [];
     let currentLine = "";
 
