@@ -15,7 +15,6 @@ export class Game {
     up: ["ArrowUp", "KeyW"],
     left: ["ArrowLeft", "KeyA"],
     right: ["ArrowRight", "KeyD"],
-    down: ["ArrowDown", "KeyS"],
   };
 
   // Canvas
@@ -47,7 +46,8 @@ export class Game {
 
   // WordPress integration
   private _reductionCode: string = "";
-  private _couponFetched: boolean = false;
+  private _reductionCodeSent: boolean = false;
+  private _isDemoMode: boolean = false;
 
   constructor(rootElement: HTMLElement) {
     this._rootElement = rootElement;
@@ -97,6 +97,10 @@ export class Game {
     this.loadAssets();
   }
 
+  private isWordPressEnvironment(): boolean {
+    return typeof (window as any).currentUserID !== "undefined";
+  }
+
   private showLoginRequired(): void {
     const container = document.createElement("div");
     container.style.cssText =
@@ -113,14 +117,60 @@ export class Game {
     description.textContent =
       "Vous devez avoir un compte et être connecté pour accéder à ce jeu.";
 
+    const demoButton = document.createElement("button");
+    demoButton.textContent = "Mode démo (sans compte)";
+    demoButton.style.cssText =
+      "margin-top: 20px; padding: 10px 20px; font-size: 16px; background: orange; color: white; border: none; border-radius: 5px; cursor: pointer;";
+    demoButton.onclick = () => this.startDemoMode();
+
     box.appendChild(title);
     box.appendChild(description);
+    box.appendChild(demoButton);
     container.appendChild(box);
     this._rootElement.innerHTML = "";
     this._rootElement.appendChild(container);
   }
 
+  private startDemoMode(): void {
+    this._isDemoMode = true;
+    // Restart the game after setting demo mode
+    this.start();
+  }
+
+  private async saveReductionCodeIfWordPress(): Promise<void> {
+    // In demo mode, do not send to server
+    if (this._isDemoMode) {
+      console.log("Mode démo: Code de réduction généré:", this._reductionCode);
+      return;
+    }
+
+    if (!this.isWordPressEnvironment() || this._reductionCodeSent) {
+      return;
+    }
+
+    try {
+      const userID = (window as any).currentUserID;
+      const response = await fetch("/wp-json/custom/v1/save-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userID, code: this._reductionCode }),
+      });
+
+      if (response.ok) {
+        this._reductionCodeSent = true;
+        console.log("Code de réduction envoyé au serveur");
+      } else {
+        console.error("Erreur lors de l'envoi du code:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Erreur d'envoi du code:", error);
+    }
+  }
+
   private createNPCs(): void {
+    // Générer le code de réduction une seule fois
+    this._reductionCode = this.generateReductionCode();
+
     this._npcs.push(
       new NPC(
         1000,
@@ -130,7 +180,7 @@ export class Game {
           "Ils me donnent des infos comme la température, l’humidité… et même l’activité des abeilles !",
           "Grâce à ça, je peux m’assurer que la ruche est en bonne santé sans la déranger.",
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc1.png`,
+        "/sprites/npc1.png",
         15, // triangle x offset to better align with the character's head
       ),
     );
@@ -144,7 +194,7 @@ export class Game {
           "Quand tu transportes du pollen d’une fleur à une autre, tu aides les plantes à produire des fruits et des graines !",
           "Sans les abeilles, beaucoup de plantes auraient du mal à se reproduire.",
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc2.png`,
+        "/sprites/npc2.png",
       ),
     );
     this._npcs.push(
@@ -158,7 +208,7 @@ export class Game {
           "Quand les abeilles disparaissent d’une zone, les récoltes peuvent devenir beaucoup plus petites.",
           "Chaque petite visite que tu fais sur une fleur aide la nature à rester en bonne santé !",
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc3.png`,
+        "/sprites/npc3.png",
       ),
     );
     this._npcs.push(
@@ -172,7 +222,7 @@ export class Game {
           "Chaque abeille a un rôle important : certaines récoltent le nectar, d’autres protègent la ruche ou s’occupent des larves.",
           "Une ruche fonctionne un peu comme une grande équipe parfaitement organisée !",
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc4.png`,
+        "/sprites/npc4.png",
         10,
       ),
     );
@@ -187,7 +237,7 @@ export class Game {
           "Même sans parler, toute la colonie peut ainsi travailler ensemble très efficacement.",
           "Les scientifiques étudient encore aujourd’hui ce comportement fascinant !",
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc5.png`,
+        "/sprites/npc5.png",
         -5,
       ),
     );
@@ -202,7 +252,7 @@ export class Game {
           "Sans pollinisateurs, certains paysages seraient beaucoup moins colorés et beaucoup moins vivants.",
           "Chaque fleur pollinisée aide un peu la biodiversité !",
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc6.png`,
+        "/sprites/npc6.png",
         -22,
       ),
     );
@@ -217,7 +267,7 @@ export class Game {
           "Toutes ces espèces jouent pourtant un rôle important pour la pollinisation des plantes !",
           "Protéger les abeilles, ce n’est pas seulement protéger une ruche… c’est protéger tout un écosystème.",
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc7.png`,
+        "/sprites/npc7.png",
         -57,
       ),
     );
@@ -234,50 +284,31 @@ export class Game {
           "Et pour te remercier… voici un code t'offrant une réduction de 20% sur ton prochain achat ! Note le bien !",
           this._reductionCode,
         ],
-        `${import.meta.env.BASE_URL}/sprites/npc8.png`,
+        "/sprites/npc8.png",
         20,
       ),
     );
   }
 
-  private async fetchOrCreateReductionCode(): Promise<string> {
-    try {
-      const response = await fetch(
-        `${import.meta.env.BASE_URL.replace("/game/", "/")}wp-json/api/v1/coupons`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-WP-Nonce":
-              (window as any).wpRestNonce ||
-              (window.parent as any).wpRestNonce ||
-              "",
-          },
-          credentials: "include",
-        },
-      );
-
-      const data = await response.json();
-
-      if (response.ok) return data.code;
-      else return "ERREUR LORS DE LA GÉNÉRATION DU CODE";
-    } catch (error) {
-      console.error("Fetch error:", error);
-      return "ERREUR LORS DE LA GÉNÉRATION DU CODE";
+  private generateReductionCode(): string {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
+    for (let i = 0; i < 10; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    return code;
   }
 
-  // FOR DEVELOPMENT
   private async loadAssets(): Promise<void> {
     const npcSrcs = [...new Set(this._npcs.map((npc) => npc.imageSrc))];
 
     const [sky, bee, ground, textbox, soundBtn, ...npcImgs] = await Promise.all(
       [
-        this.loadImage(`${import.meta.env.BASE_URL}/sprites/sky.png`),
-        this.loadImage(`${import.meta.env.BASE_URL}/sprites/bee.png`),
-        this.loadImage(`${import.meta.env.BASE_URL}/sprites/ground.png`),
-        this.loadImage(`${import.meta.env.BASE_URL}/sprites/textbox.png`),
-        this.loadImage(`${import.meta.env.BASE_URL}/sprites/sound_btn.png`),
+        this.loadImage("/sprites/sky.png"),
+        this.loadImage("/sprites/bee.png"),
+        this.loadImage("/sprites/ground.png"),
+        this.loadImage("/sprites/textbox.png"),
+        this.loadImage("/sprites/sound_btn.png"),
         ...npcSrcs.map((src) => this.loadImage(src)),
       ],
     );
@@ -297,7 +328,7 @@ export class Game {
         npcSrcs
           .map((src) => {
             const name = src.split("/").pop()?.split(".")[0];
-            return `${import.meta.env.BASE_URL}/sprites/${name}_face.png`;
+            return `/sprites/${name}_face.png`;
           })
           .map((src) => this.loadImage(src)),
       )
@@ -316,31 +347,23 @@ export class Game {
   }
 
   start(): void {
-    // Verify is the user is connected
-    if (
-      !((window as any).currentUserID || (window.parent as any).currentUserID)
-    ) {
-      this.showLoginRequired();
-      return;
+    // Vérifier si on est dans WordPress et l'utilisateur est connecté
+    if (this.isWordPressEnvironment() && !this._isDemoMode) {
+      const userID = (window as any).currentUserID;
+      if (!userID) {
+        this.showLoginRequired();
+        return;
+      }
     }
 
     // Setup event listeners
     window.addEventListener("keydown", (e) => {
-      if (Game.KEY_CODES.up.includes(e.code)) {
-        e.preventDefault();
+      if (Game.KEY_CODES.up.includes(e.code))
         this._inputManager.registerKeyDown("up");
-      }
-      if (Game.KEY_CODES.left.includes(e.code)) {
-        e.preventDefault();
+      if (Game.KEY_CODES.left.includes(e.code))
         this._inputManager.registerKeyDown("left");
-      }
-      if (Game.KEY_CODES.right.includes(e.code)) {
-        e.preventDefault();
+      if (Game.KEY_CODES.right.includes(e.code))
         this._inputManager.registerKeyDown("right");
-      }
-      if (Game.KEY_CODES.down.includes(e.code)) {
-        e.preventDefault();
-      }
 
       // Handle space bar for dialog interaction
       if (e.code === "Space") {
@@ -358,21 +381,12 @@ export class Game {
     });
 
     window.addEventListener("keyup", (e) => {
-      if (Game.KEY_CODES.up.includes(e.code)) {
-        e.preventDefault();
+      if (Game.KEY_CODES.up.includes(e.code))
         this._inputManager.registerKeyUp("up");
-      }
-      if (Game.KEY_CODES.left.includes(e.code)) {
-        e.preventDefault();
+      if (Game.KEY_CODES.left.includes(e.code))
         this._inputManager.registerKeyUp("left");
-      }
-      if (Game.KEY_CODES.right.includes(e.code)) {
-        e.preventDefault();
+      if (Game.KEY_CODES.right.includes(e.code))
         this._inputManager.registerKeyUp("right");
-      }
-      if (Game.KEY_CODES.down.includes(e.code)) {
-        e.preventDefault();
-      }
     });
 
     window.addEventListener("mousemove", (e) => {
@@ -490,31 +504,12 @@ export class Game {
     // Update tick
     this._tick += dt * 60;
 
-    // Fetch the coupon if the last NPC dialogue starts
+    // Envoyer le code de réduction si le dernier NPC dialogue
     if (
-      !this._couponFetched &&
       this._npcs.length > 0 &&
       this._dialogManager.activeDialogNPC === this._npcs[this._npcs.length - 1]
     ) {
-      this._couponFetched = true;
-      this.fetchAndUpdateCoupon();
-    }
-  }
-
-  private async fetchAndUpdateCoupon(): Promise<void> {
-    if (this._npcs.length > 0) {
-      const lastNPC = this._npcs[this._npcs.length - 1];
-      lastNPC.message[lastNPC.message.length - 1] =
-        "Génération de ton code en cours...";
-    }
-
-    this._reductionCode = await this.fetchOrCreateReductionCode();
-
-    if (this._npcs.length > 0) {
-      const lastNPC = this._npcs[this._npcs.length - 1];
-      lastNPC.message[lastNPC.message.length - 1] =
-        this._reductionCode || "Erreur lors de la génération du code";
-      lastNPC.message = [...lastNPC.message];
+      this.saveReductionCodeIfWordPress();
     }
   }
 
