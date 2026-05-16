@@ -273,11 +273,11 @@ export class Game {
 
     const [sky, bee, ground, textbox, soundBtn, ...npcImgs] = await Promise.all(
       [
-        this.loadImage(`/sprites/sky.png`),
-        this.loadImage(`/sprites/bee.png`),
-        this.loadImage(`/sprites/ground.png`),
-        this.loadImage(`/sprites/textbox.png`),
-        this.loadImage(`/sprites/sound_btn.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/sky.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/bee.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/ground.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/textbox.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/sound_btn.png`),
         ...npcSrcs.map((src) => this.loadImage(src)),
       ],
     );
