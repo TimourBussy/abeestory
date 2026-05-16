@@ -47,6 +47,7 @@ export class Game {
   // WordPress integration
   private _reductionCode: string = "";
   private _reductionCodeSent: boolean = false;
+  private _isDemoMode: boolean = false;
 
   constructor(rootElement: HTMLElement) {
     this._rootElement = rootElement;
@@ -101,22 +102,49 @@ export class Game {
   }
 
   private showLoginRequired(): void {
-    this._rootElement.innerHTML =
-      '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 24px; text-align: center;">' +
-      '<div style="background: lightblue; padding: 40px; border-radius: 10px;">' +
-      "<h1>Connectez-vous pour jouer</h1>" +
-      "<p>Vous devez avoir un compte et être connecté pour accéder à ce jeu.</p>" +
-      "</div>" +
-      "</div>";
+    const container = document.createElement("div");
+    container.style.cssText =
+      "display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 24px; text-align: center;";
+
+    const box = document.createElement("div");
+    box.style.cssText =
+      "background: lightblue; padding: 40px; border-radius: 10px; min-width: 400px;";
+
+    const title = document.createElement("h1");
+    title.textContent = "Connectez-vous pour jouer";
+
+    const description = document.createElement("p");
+    description.textContent =
+      "Vous devez avoir un compte et être connecté pour accéder à ce jeu.";
+
+    const demoButton = document.createElement("button");
+    demoButton.textContent = "Mode démo (sans compte)";
+    demoButton.style.cssText =
+      "margin-top: 20px; padding: 10px 20px; font-size: 16px; background: orange; color: white; border: none; border-radius: 5px; cursor: pointer;";
+    demoButton.onclick = () => this.startDemoMode();
+
+    box.appendChild(title);
+    box.appendChild(description);
+    box.appendChild(demoButton);
+    container.appendChild(box);
+    this._rootElement.innerHTML = "";
+    this._rootElement.appendChild(container);
+  }
+
+  private startDemoMode(): void {
+    this._isDemoMode = true;
+    // Restart the game after setting demo mode
+    this.start();
   }
 
   private async saveReductionCodeIfWordPress(): Promise<void> {
-    if (!this.isWordPressEnvironment() || this._reductionCodeSent) {
+    // In demo mode, do not send to server
+    if (this._isDemoMode) {
+      console.log("Mode démo: Code de réduction généré:", this._reductionCode);
       return;
     }
 
-    if (!this.isWordPressEnvironment()) {
-      console.log("Dev mode: Code de réduction généré:", this._reductionCode);
+    if (!this.isWordPressEnvironment() || this._reductionCodeSent) {
       return;
     }
 
@@ -320,7 +348,7 @@ export class Game {
 
   start(): void {
     // Vérifier si on est dans WordPress et l'utilisateur est connecté
-    if (this.isWordPressEnvironment()) {
+    if (this.isWordPressEnvironment() && !this._isDemoMode) {
       const userID = (window as any).currentUserID;
       if (!userID) {
         this.showLoginRequired();
