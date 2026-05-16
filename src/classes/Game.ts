@@ -273,7 +273,7 @@ export class Game {
     );
     this._npcs.push(
       new NPC(
-        5000,
+        200,
         "Professeur Mellis",
         [
           "Félicitations petite abeille ! Tu es arrivée au bout de ton voyage.",
@@ -304,11 +304,11 @@ export class Game {
 
     const [sky, bee, ground, textbox, soundBtn, ...npcImgs] = await Promise.all(
       [
-        this.loadImage("/sprites/sky.png"),
-        this.loadImage("/sprites/bee.png"),
-        this.loadImage("/sprites/ground.png"),
-        this.loadImage("/sprites/textbox.png"),
-        this.loadImage("/sprites/sound_btn.png"),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/sky.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/bee.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/ground.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/textbox.png`),
+        this.loadImage(`${import.meta.env.BASE_URL}/sprites/sound_btn.png`),
         ...npcSrcs.map((src) => this.loadImage(src)),
       ],
     );
@@ -342,7 +342,7 @@ export class Game {
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
-      img.src = `${import.meta.env.BASE_URL}${src}`;
+      img.src = src;
     });
   }
 
