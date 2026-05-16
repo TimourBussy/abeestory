@@ -319,6 +319,7 @@ export class RenderManager {
   }
 
   private wrapDialog(text: string, maxWidth: number): string[] {
+    if (!text) return [""];
     const lines: string[] = [];
     let currentLine = "";
 
