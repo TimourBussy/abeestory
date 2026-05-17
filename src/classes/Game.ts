@@ -317,11 +317,13 @@ export class Game {
 
   start(): void {
     // Verify is the user is connected
-    if (
-      !((window as any).currentUserID || (window.parent as any).currentUserID)
-    ) {
-      this.showLoginRequired();
-      return;
+    if (!import.meta.env.DEV) {
+      if (
+        !((window as any).currentUserID || (window.parent as any).currentUserID)
+      ) {
+        this.showLoginRequired();
+        return;
+      }
     }
 
     // Setup event listeners
